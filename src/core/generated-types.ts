@@ -2,12 +2,12 @@
 // Generation timestamp: 2025-07-20T23:24:33.742Z
 
 import React from 'react';
-import { ButtonProps } from '../library/Button';
-import { CardProps } from '../library/Card';
-import { TestNewComponentProps } from '../library/TestNewComponent';
-import { InputProps } from '../library/forms/Input';
-import { HeaderProps } from '../library/layout/Header';
-import { TestComponentProps } from '../library/test-watch/TestComponent';
+// import { ButtonProps } from '../library/Button';
+// import { CardProps } from '../library/Card';
+// import { TestNewComponentProps } from '../library/TestNewComponent';
+// import { InputProps } from '../library/forms/Input';
+// import { HeaderProps } from '../library/layout/Header';
+// import { TestComponentProps } from '../library/test-watch/TestComponent';
 
 // Базовый тип для всех спеков
 export interface BaseUserFace {
@@ -22,7 +22,7 @@ export interface BaseUserFace {
 }
 
 // UserFace - автоматически генерируется из компонентов в папке library
-export type UserFace = BaseUserFace & ({ component: 'button'; props: ButtonProps; } | { component: 'card'; props: CardProps; } | { component: 'testnewcomponent'; props: TestNewComponentProps; } | { component: 'input'; props: InputProps; } | { component: 'header'; props: HeaderProps; } | { component: 'testcomponent'; props: TestComponentProps; });
+export type UserFace = BaseUserFace;
 
 // Типы для движка
 export interface UserEngine {
