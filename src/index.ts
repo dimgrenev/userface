@@ -1,7 +1,6 @@
 // Core exports
 export { engine } from './core/engine';
 export { unifiedRegistry } from './core/registry';
-export { Analyzer, analyzer } from './core/analyzer';
 
 // Logging
 export { logger } from './core/logger';
