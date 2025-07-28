@@ -193,6 +193,50 @@ export class Registry implements UserEngine {
     logger.info(`Registry initialization completed (version ${currentVersion})`, 'Registry');
   }
 
+  // Полная инициализация с адаптерами и авторегистрацией
+  initializeWithAdapters(adapters: any[]): void {
+    this.initialize();
+
+    // Регистрируем адаптеры
+    adapters.forEach(({ adapter, name }) => {
+      try {
+        const existingAdapter = this.getAdapter(adapter.id);
+        
+        if (existingAdapter) {
+          this.reinstallAdapter(adapter);
+          logger.info(`${name} renderer reinstalled`, 'Registry');
+        } else {
+          this.registerAdapter(adapter);
+          logger.info(`${name} renderer registered`, 'Registry');
+        }
+      } catch (error) {
+        logger.error(`${name} renderer registration failed`, 'Registry', error as Error);
+      }
+    });
+
+    // Авторегистрация компонентов
+    try {
+      const result = this.findUserfaceFolder();
+      
+      if (result.found) {
+        const { autoRegisterAllComponents } = require('./find-components-recursively');
+        const success = autoRegisterAllComponents(result.path!, this);
+        
+        if (success) {
+          logger.info('Components auto-registered', 'Registry');
+        } else {
+          logger.info('No components found', 'Registry');
+        }
+      } else {
+        logger.info('No userface folder found', 'Registry');
+      }
+    } catch (error) {
+      logger.warn('Auto-registration not available', 'Registry', { error });
+    }
+
+    logger.info('Registry full initialization completed', 'Registry');
+  }
+
   private getCurrentVersion(): string {
     try {
       if (typeof require !== 'undefined') {
@@ -237,6 +281,89 @@ export class Registry implements UserEngine {
       logger.info(`Auto-registered component: ${componentName}`, 'Registry');
     } catch (error) {
       logger.error(`Failed to register component: ${componentName}`, 'Registry', error as Error);
+    }
+  }
+
+  // === ПОИСК ПАПКИ USERFACE ===
+  
+  findUserfaceFolder(): { found: boolean; path?: string; error?: string } {
+    try {
+      const projectRoot = this.findProjectRoot();
+      if (!projectRoot) {
+        return { found: false, error: 'Project root not found' };
+      }
+
+      const userfacePath = this.findUserfaceRecursively(projectRoot);
+      
+      if (userfacePath) {
+        logger.info(`Found userface folder: ${userfacePath}`, 'Registry');
+        return { found: true, path: userfacePath };
+      }
+
+      return { found: false, error: 'Userface folder not found' };
+
+    } catch (error) {
+      logger.error('Error finding userface folder', 'Registry', error as Error);
+      return { found: false, error: `Search failed: ${error}` };
+    }
+  }
+
+  private findProjectRoot(): string | null {
+    try {
+      if (typeof window !== 'undefined') return null;
+
+      const fs = require('fs');
+      const path = require('path');
+      
+      let currentDir = process.cwd();
+      const maxDepth = 5;
+      
+      for (let depth = 0; depth < maxDepth; depth++) {
+        const packageJsonPath = path.join(currentDir, 'package.json');
+        
+        if (fs.existsSync(packageJsonPath)) {
+          return currentDir;
+        }
+        
+        const parentDir = path.dirname(currentDir);
+        if (parentDir === currentDir) break;
+        
+        currentDir = parentDir;
+      }
+      
+      return null;
+    } catch (error) {
+      logger.error('Error finding project root', 'Registry', error as Error);
+      return null;
+    }
+  }
+
+  private findUserfaceRecursively(dir: string, depth: number = 0): string | null {
+    try {
+      if (typeof window !== 'undefined' || depth > 3) return null;
+
+      const fs = require('fs');
+      const path = require('path');
+
+      const items = fs.readdirSync(dir);
+
+      for (const item of items) {
+        const itemPath = path.join(dir, item);
+        const stats = fs.statSync(itemPath);
+
+        if (stats.isDirectory()) {
+          if (item === 'userface') {
+            return itemPath;
+          }
+          const result = this.findUserfaceRecursively(itemPath, depth + 1);
+          if (result) return result;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      logger.debug(`Error searching in directory: ${dir}`, 'Registry', error as Error);
+      return null;
     }
   }
 

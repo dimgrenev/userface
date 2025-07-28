@@ -1,5 +1,5 @@
 import React from 'react';
-import { engine } from '../core/engine';
+import { unifiedRegistry as engine } from '../core/registry';
 import { UserRenderer } from '../core/render-react';
 
 // Тестовые компоненты с универсальными типами

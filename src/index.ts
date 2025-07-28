@@ -4,7 +4,6 @@ export { unifiedRegistry as engine, unifiedRegistry } from './core/registry';
 // Logging
 export { logger } from './core/logger';
 export type { LogLevel, LogEntry } from './core/logger';
-export { findUserfaceFolder } from './core/find-userface-folder';
 export { findComponentsRecursively, autoRegisterAllComponents } from './core/find-components-recursively';
 
 // React adapter exports
@@ -57,4 +56,18 @@ export {
 export { validateUserFace } from './core/types';
 
 // Auto-register renderers and components
-import './core/init';
+import { unifiedRegistry } from './core/registry';
+import { renderReact } from './core/render-react';
+import { renderVue } from './core/render-vue';
+import { renderAngular } from './core/render-angular';
+import { renderSvelte } from './core/render-svelte';
+import { renderVanilla } from './core/render-vanilla';
+
+// Инициализация с адаптерами
+unifiedRegistry.initializeWithAdapters([
+  { adapter: renderReact, name: 'React' },
+  { adapter: renderVue, name: 'Vue' },
+  { adapter: renderAngular, name: 'Angular' },
+  { adapter: renderSvelte, name: 'Svelte' },
+  { adapter: renderVanilla, name: 'Vanilla JS' }
+]);
