@@ -1,32 +1,84 @@
 // Core exports
-export { userEngine } from './core/UserEngine';
-export { UserRenderer } from './core/UserRenderer';
-export { useUserEngine } from './core/useUserEngine';
-export { UserContext } from './core/UserContext';
+export { engine } from './core/engine';
+export { unifiedRegistry } from './core/registry';
+export { Analyzer, analyzer } from './core/analyzer';
 
-// Generated types
-export type { UserFace, UserEngine as UserEngineType } from './core/generated-types';
+// Logging
+export { logger } from './core/logger';
+export type { LogLevel, LogEntry } from './core/logger';
 
-// Component registry
-export { componentRegistry } from './core/reestr';
+// Auto-registration
+export { autoRegisterComponents, autoRegisterComponent } from './core/auto-register-components';
+export { findUserfaceFolder } from './core/find-userface-folder';
+export { findComponentsRecursively, autoRegisterAllComponents } from './core/find-components-recursively';
 
-// Экспорт утилит
-export { generateId, validateUserFace } from './core/utils';
+// React adapter exports
+export { renderReact, RenderReact } from './core/render-react';
+export { UserRenderer, UserContextProvider, useUserContext, useUserFace } from './core/render-react';
 
-// Default export for compatibility with CJS/ESM consumers
-import { userEngine } from './core/UserEngine';
-import { UserRenderer } from './core/UserRenderer';
-import { useUserEngine } from './core/useUserEngine';
-import { UserContext } from './core/UserContext';
-import { componentRegistry } from './core/reestr';
-import { generateId, validateUserFace } from './core/utils';
+// Vue adapter exports
+export { renderVue, RenderVue } from './core/render-vue';
 
-export default {
-  userEngine,
-  UserRenderer,
-  useUserEngine,
-  UserContext,
-  componentRegistry,
-  generateId,
-  validateUserFace,
-};
+// Angular adapter exports
+export { renderAngular, RenderAngular } from './core/render-angular';
+
+// Svelte adapter exports
+export { renderSvelte, RenderSvelte } from './core/render-svelte';
+
+// Vanilla JS adapter exports
+export { renderVanilla, RenderVanilla } from './core/render-vanilla';
+
+// Type exports
+export type {
+  UserFace,
+  ComponentSchema,
+  PropDefinition,
+  EventDefinition,
+  ComponentRegistration,
+  RenderPlatform,
+  UserEngine,
+  Platform,
+  PropType,
+  ComponentName,
+  ComponentSpec,
+  ButtonSpec,
+  TextSpec,
+  InputSpec,
+  CardSpec,
+  ModalSpec,
+  FormSpec,
+  ListSpec,
+  TableSpec,
+  TabsSpec,
+  AccordionSpec,
+  SliderSpec,
+  ProgressSpec,
+  CheckboxSpec,
+  RadioSpec,
+  SelectSpec,
+  TextareaSpec,
+  ImageSpec,
+  LinkSpec,
+  ContainerSpec,
+  LayoutSpec,
+  MediaSpec,
+  PanelSpec,
+  SideSpec,
+  FooterSpec,
+  FilterSpec,
+  FeedSpec,
+  CodeSpec,
+  CardcartSpec,
+  ArticleSpec,
+  UserFaceError,
+  ComponentNotFoundError,
+  ValidationError,
+  RenderError,
+  ContextProvider
+} from './core/types';
+
+// Utility functions
+export { createSpec, isComponentSpec, validateUserFace } from './core/types';
+
+// Auto-register renderers and components
+import './core/init';

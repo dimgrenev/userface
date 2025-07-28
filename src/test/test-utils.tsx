@@ -1,25 +1,20 @@
 import React from 'react';
-import { render, RenderResult } from '@testing-library/react';
-import { UserComponent } from '../core/UserContext';
-import { userEngine } from '../core/UserEngine';
+import { UserRenderer } from '../core/render-react';
 import { UserFace } from '../core/types';
 
+// Утилита для рендеринга компонентов в тестах
 export const renderWithUserEngine = (
-  component: React.ReactElement,
-  face?: UserFace,
-): RenderResult & { engine: typeof userEngine } => {
-  const renderResult = render(
-    face ? (
-      <UserComponent face={face}>
-        {component}
-      </UserComponent>
-    ) : (
-      component
-    )
+  face: UserFace,
+  options?: {
+    fallback?: React.ComponentType<any>;
+    onError?: (error: string, face: any) => void;
+  }
+) => {
+  return (
+    <UserRenderer 
+      face={face} 
+      fallback={options?.fallback}
+      onError={options?.onError}
+    />
   );
-
-  return { ...renderResult, engine: userEngine };
-};
-
-export * from '@testing-library/react';
-export { renderWithUserEngine as render }; 
+}; 

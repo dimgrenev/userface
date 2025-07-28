@@ -16,7 +16,7 @@ export default defineConfig({
       entry: 'src/index.ts',
       name: 'UserFace',
       formats: ['es', 'cjs'],
-      fileName: (format) => `index.${format === 'es' ? 'esm' : 'js'}`,
+      fileName: (format) => `index.${format === 'es' ? 'esm.js' : 'js'}`,
     },
     rollupOptions: {
       external: ['react', 'react-dom'],
