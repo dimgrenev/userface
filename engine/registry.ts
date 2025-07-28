@@ -372,5 +372,5 @@ export class Registry implements UserEngine {
   }
 }
 
-// Создаем глобальный экземпляр
-export const unifiedRegistry = new Registry(); 
+// Registry больше не экспортируется как unifiedRegistry
+// Используйте Engine из engine-factory.ts 

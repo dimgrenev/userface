@@ -1,7 +1,6 @@
 // Core exports
 export { Engine } from './engine/engine';
 export { EngineFactory, engine } from './engine/engine-factory';
-export { unifiedRegistry } from './engine/registry'; // Legacy export for backward compatibility
 
 // Logging
 export { logger } from './engine/logger';
@@ -97,16 +96,16 @@ export { lifecycleManager as lifecycle } from './engine/lifecycle-manager';
 export { eventBus as events } from './engine/event-bus';
 
 // Auto-register renderers and components
-import { unifiedRegistry } from './engine/registry';
+import { engine } from './engine/engine-factory';
 import { renderReact } from './engine/render-react';
 import { renderVue } from './engine/render-vue';
 import { renderAngular } from './engine/render-angular';
 import { renderSvelte } from './engine/render-svelte';
 import { renderVanilla } from './engine/render-vanilla';
 
-// Регистрация адаптеров
-unifiedRegistry.registerAdapter(renderReact);
-unifiedRegistry.registerAdapter(renderVue);
-unifiedRegistry.registerAdapter(renderAngular);
-unifiedRegistry.registerAdapter(renderSvelte);
-unifiedRegistry.registerAdapter(renderVanilla);
+// Регистрация адаптеров через Engine
+engine.registerAdapter(renderReact);
+engine.registerAdapter(renderVue);
+engine.registerAdapter(renderAngular);
+engine.registerAdapter(renderSvelte);
+engine.registerAdapter(renderVanilla);

@@ -1,7 +1,7 @@
 import { Face } from './types';
 import { RenderPlatform, Renderer } from './api';
 import { ComponentNotFoundError } from './errors';
-import { unifiedRegistry } from './registry';
+import { engine } from './engine-factory';
 
 // Vue рендерер
 class VueRenderer implements Renderer {
@@ -80,7 +80,7 @@ export class RenderVue implements RenderPlatform {
     if (!this.supportedComponents.includes(spec.component)) {
       return false;
     }
-    const schema = unifiedRegistry.getSchema(spec.component);
+    const schema = engine.getComponentSchema(spec.component);
     if (schema) {
       const requiredProps = schema.props.filter(p => p.required);
       for (const prop of requiredProps) {
@@ -134,7 +134,7 @@ export class RenderVue implements RenderPlatform {
   
   // Получение компонента из реестра
   private getComponentFromRegistry(componentName: string): any {
-    return unifiedRegistry.getComponent(componentName);
+    return engine.getComponent(componentName);
   }
 }
 

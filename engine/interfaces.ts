@@ -16,6 +16,10 @@ export interface IComponentStore {
   getComponentNames(): string[];
   updateComponentSchema(name: string, schema: Schema): void;
   validateComponent(name: string): boolean;
+  // Адаптеры
+  registerAdapter(adapter: any): void;
+  getAdapter(adapterId: string): any;
+  getAllAdapters(): any[];
 }
 
 export interface IDataService {

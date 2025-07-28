@@ -105,6 +105,23 @@ export class ComponentRegistry implements IComponentStore {
     // Базовая валидация компонента
     return typeof component === 'function' || typeof component === 'object';
   }
+
+  // === АДАПТЕРЫ ===
+  private adapters: Map<string, any> = new Map();
+
+  registerAdapter(adapter: any): void {
+    const adapterId = adapter.id || `adapter-${this.adapters.size}`;
+    this.adapters.set(adapterId, adapter);
+    console.log(`Adapter registered: ${adapterId}`);
+  }
+
+  getAdapter(adapterId: string): any | undefined {
+    return this.adapters.get(adapterId);
+  }
+
+  getAllAdapters(): any[] {
+    return Array.from(this.adapters.values());
+  }
 }
 
 export const componentRegistry = new ComponentRegistry(); 

@@ -115,6 +115,21 @@ export class Engine {
     return this.dataService.getState(path);
   }
 
+  // === АДАПТЕРЫ ===
+  registerAdapter(adapter: any): void {
+    // Простая реализация - сохраняем адаптер в componentStore
+    this.componentStore.registerAdapter?.(adapter);
+    this.logger.info(`Adapter registered: ${adapter.id || adapter.name}`);
+  }
+
+  getAdapter(adapterId: string): any {
+    return this.componentStore.getAdapter?.(adapterId);
+  }
+
+  getAllAdapters(): any[] {
+    return this.componentStore.getAllAdapters?.() || [];
+  }
+
   // === ПЛАГИНЫ ===
   async registerPlugin(plugin: any, config?: any): Promise<void> {
     await this.pluginManager.registerPlugin(plugin, config);
