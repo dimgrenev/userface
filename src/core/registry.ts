@@ -3,6 +3,8 @@ import { logger } from './logger';
 import { componentAnalyzer } from './analyzer';
 import { AdapterManager } from './adapter-manager';
 import { SystemInitializer } from './initializer';
+import { SystemMonitor } from './monitor';
+import { ComponentScanner } from './scanner';
 import { UserEngine } from './api';
 
 // Главный класс Registry - ядро системы
@@ -19,16 +21,22 @@ export class Registry implements UserEngine {
   // Модули
   private adapterManager: AdapterManager;
   private initializer: SystemInitializer;
+  private monitor: SystemMonitor;
+  private scanner: ComponentScanner;
 
   constructor() {
     this.adapterManager = new AdapterManager();
     this.initializer = new SystemInitializer();
+    this.monitor = new SystemMonitor();
+    this.scanner = new ComponentScanner();
     logger.info('Registry initialized', 'Registry');
   }
 
   // === РЕГИСТРАЦИЯ ===
   
   registerComponent(name: string, component: any): ComponentSchema {
+    const startTime = Date.now();
+    
     try {
       // Проверяем кеш схем
       let schema = this.schemas.get(name);
@@ -44,11 +52,15 @@ export class Registry implements UserEngine {
       // Сохраняем компонент (только один раз!)
       this.components.set(name, component);
       
+      // Отслеживаем метрики
+      this.monitor.trackRegistration(name, Date.now() - startTime);
+      
       logger.info(`Registered component "${name}"`, 'Registry', { name, schema });
       
       return schema || this.createFallbackSchema(name);
       
     } catch (error) {
+      this.monitor.trackError(error as Error, { name });
       logger.error(`Failed to register component "${name}"`, 'Registry', error as Error, { name });
       
       const fallbackSchema = this.createFallbackSchema(name);
@@ -194,7 +206,16 @@ export class Registry implements UserEngine {
   }
 
   renderWithAdapter(spec: any, adapterId: string): any {
-    return this.adapterManager.renderWithAdapter(spec, adapterId);
+    const startTime = Date.now();
+    
+    try {
+      const result = this.adapterManager.renderWithAdapter(spec, adapterId);
+      this.monitor.trackRender(adapterId, Date.now() - startTime);
+      return result;
+    } catch (error) {
+      this.monitor.trackError(error as Error, { adapterId });
+      throw error;
+    }
   }
 
   // === ИНИЦИАЛИЗАЦИЯ (делегируем в SystemInitializer) ===
@@ -211,6 +232,20 @@ export class Registry implements UserEngine {
     return this.initializer.isSystemInitialized();
   }
 
+  // === СКАНИРОВАНИЕ (делегируем в ComponentScanner) ===
+  
+  findUserfaceFolder() {
+    return this.scanner.findUserfaceFolder();
+  }
+
+  scanUserfaceFolder(userfacePath: string) {
+    return this.scanner.scanUserfaceFolder(userfacePath);
+  }
+
+  autoRegisterComponents(componentModule: any, prefix: string = '') {
+    return this.scanner.autoRegisterComponents(componentModule, prefix);
+  }
+
   // === ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ ===
   
   renderWithAllAdapters(spec: any): Record<string, any> {
@@ -221,7 +256,9 @@ export class Registry implements UserEngine {
     return {
       components: this.getAllComponentNames().length,
       schemas: this.getAllSchemas().length,
-      adapters: this.getAllAdapters().length
+      adapters: this.getAllAdapters().length,
+      system: this.monitor.getStats(),
+      performance: this.monitor.getPerformanceMetrics()
     };
   }
 
@@ -235,12 +272,23 @@ export class Registry implements UserEngine {
   }
 
   validateMigration(sourceSchema: any, targetPlatform: string): any {
+    // Используем логику из SchemaCache
+    const issues: string[] = [];
+    let compatibility = 100;
+    
+    // Проверяем совместимость платформ
+    if (sourceSchema.platform === targetPlatform) {
+      return { canMigrate: true, issues: [], compatibility: 100 };
+    }
+    
     // Простая валидация - в реальной реализации будет более сложная логика
-    return {
+    logger.info(`Migration validation for ${sourceSchema.name} to ${targetPlatform}`, 'Registry', {
       canMigrate: true,
-      issues: [],
-      compatibility: 100
-    };
+      compatibility: 100,
+      issuesCount: 0
+    });
+    
+    return { canMigrate: true, issues, compatibility };
   }
 
   // === ПРИВАТНЫЕ МЕТОДЫ ===

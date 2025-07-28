@@ -63,6 +63,7 @@ export class ComponentScanner {
       if (typeof component === 'function' || typeof component === 'object') {
         logger.info(`Auto-registering component: ${componentName}`, 'ComponentScanner', { name: componentName });
         // В реальной реализации здесь будет вызов registry.registerComponent()
+        // Пока что просто логируем, так как нет доступа к registry из scanner
       }
     } catch (error) {
       logger.error(`Failed to auto-register component: ${componentName}`, 'ComponentScanner', error as Error, { name: componentName });
