@@ -24,7 +24,7 @@ export interface EventDefinition {
 }
 
 // Унифицированная схема компонента
-export interface ComponentSchema {
+export interface Schema {
   name: string;
   platform: Platform;
   props: PropDefinition[];
@@ -44,6 +44,6 @@ export interface ComponentSchema {
 export interface ComponentRegistration {
   name: string;
   component: any;
-  schema: ComponentSchema;
+  schema: Schema;
   adapterId?: string; // в каком адаптере регистрируется
 } 

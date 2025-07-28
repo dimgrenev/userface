@@ -1,5 +1,5 @@
 import { dataLayer } from './engine/data-layer';
-import { UserFace } from './engine/types';
+import { Face } from './engine/types';
 import { logger } from './engine/logger';
 
 class MockAPI {
@@ -173,7 +173,7 @@ export class DataLayerTests {
     }
 
     private async testUserFaceIntegration(): Promise<void> {
-        const userFace: UserFace = {
+        const userFace: Face = {
             component: 'TestComponent',
             data: {
                 user: {

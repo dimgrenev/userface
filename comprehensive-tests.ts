@@ -4,8 +4,8 @@ import { validationEngine } from './engine/validation';
 import { errorRecovery } from './engine/error-recovery';
 import { pluginSystem } from './engine/plugin-system';
 import { componentAnalyzer } from './engine/analyzer';
-import { UserFace } from './engine/types';
-import { ComponentSchema } from './engine/schema';
+import { Face } from './engine/types';
+import { Schema } from './engine/schema';
 import { logger } from './engine/logger';
 
 const mockReactComponent = {

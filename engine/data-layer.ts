@@ -1,4 +1,4 @@
-import { UserFace } from './types';
+import { Face } from './types';
 import { logger } from './logger';
 
 export type DataSource = 'api' | 'local' | 'cache' | 'websocket' | 'file';
@@ -395,7 +395,7 @@ export class DataLayer {
         return this.getStats();
     }
 
-    async renderWithData(spec: UserFace, adapterId: string): Promise<any> {
+    async renderWithData(spec: Face, adapterId: string): Promise<any> {
         // Простая реализация - возвращаем компонент с данными
         const component = spec.component;
         const data = spec.data || {};

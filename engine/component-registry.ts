@@ -1,19 +1,19 @@
-import { ComponentSchema } from './types';
-import { IComponentRegistry } from './interfaces';
+import { Schema } from './schema';
+import { IComponentStore } from './interfaces';
 
-export class ComponentRegistry implements IComponentRegistry {
+export class ComponentRegistry implements IComponentStore {
   private components: Map<string, any> = new Map();
-  private schemas: Map<string, ComponentSchema> = new Map();
+  private schemas: Map<string, Schema> = new Map();
 
-  registerComponent(name: string, component: any, schema?: ComponentSchema): void {
+  registerComponent(name: string, component: any, schema?: Schema): void {
     try {
       // Если схема не предоставлена, создаем базовую
       if (!schema) {
         schema = {
           name,
-          props: {},
-          events: {},
-          children: false
+          platform: 'universal',
+          props: [],
+          events: []
         };
       }
 
@@ -36,7 +36,7 @@ export class ComponentRegistry implements IComponentRegistry {
     return component;
   }
 
-  getComponentSchema(name: string): ComponentSchema | null {
+  getComponentSchema(name: string): Schema | null {
     const schema = this.schemas.get(name);
     if (!schema) {
       console.warn(`Schema not found for component: ${name}`);
@@ -49,7 +49,7 @@ export class ComponentRegistry implements IComponentRegistry {
     return new Map(this.components);
   }
 
-  getAllSchemas(): Map<string, ComponentSchema> {
+  getAllSchemas(): Map<string, Schema> {
     return new Map(this.schemas);
   }
 
@@ -85,7 +85,7 @@ export class ComponentRegistry implements IComponentRegistry {
     return Array.from(this.components.keys());
   }
 
-  updateComponentSchema(name: string, schema: ComponentSchema): void {
+  updateComponentSchema(name: string, schema: Schema): void {
     if (this.components.has(name)) {
       this.schemas.set(name, schema);
       console.log(`Schema updated for component: ${name}`);

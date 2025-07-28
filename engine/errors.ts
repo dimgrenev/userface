@@ -1,4 +1,4 @@
-import { UserFace } from './types';
+import { Face } from './types';
 
 // Типизированные ошибки
 export class UserFaceError extends Error {
@@ -6,7 +6,7 @@ export class UserFaceError extends Error {
     message: string,
     public code: string,
     public details?: string,
-    public face?: UserFace
+    public face?: Face
   ) {
     super(message);
     this.name = 'UserFaceError';
@@ -24,13 +24,13 @@ export class ComponentNotFoundError extends UserFaceError {
 }
 
 export class ValidationError extends UserFaceError {
-  constructor(message: string, details?: string, face?: UserFace) {
+  constructor(message: string, details?: string, face?: Face) {
     super(message, 'VALIDATION_ERROR', details, face);
   }
 }
 
 export class RenderError extends UserFaceError {
-  constructor(message: string, details?: string, face?: UserFace) {
+  constructor(message: string, details?: string, face?: Face) {
     super(message, 'RENDER_ERROR', details, face);
   }
 } 

@@ -1,5 +1,5 @@
-import { UserFace, Type } from './types';
-import { ComponentSchema, PropDefinition } from './schema';
+import { Face, Type } from './types';
+import { Schema, PropDefinition } from './schema';
 import { ValidationError } from './errors';
 import { logger } from './logger';
 
@@ -32,7 +32,7 @@ export class ValidationWarning extends Error {
 }
 
 export class ValidationEngine {
-    validateUserFace(spec: UserFace, schema: ComponentSchema): ValidationResult {
+    validateUserFace(spec: Face, schema: Schema): ValidationResult {
         logger.debug(`Validating UserFace: ${spec.component} with schema: ${schema.name}`);
         
         const errors: ValidationError[] = [];
@@ -55,7 +55,7 @@ export class ValidationEngine {
         };
     }
 
-    validateProps(spec: UserFace, schema: ComponentSchema): ValidationResult {
+    validateProps(spec: Face, schema: Schema): ValidationResult {
         const errors: ValidationError[] = [];
         const warnings: ValidationWarning[] = [];
 
@@ -86,7 +86,7 @@ export class ValidationEngine {
         return { isValid: errors.length === 0, errors, warnings };
     }
 
-    validateEvents(spec: UserFace, schema: ComponentSchema): ValidationResult {
+    validateEvents(spec: Face, schema: Schema): ValidationResult {
         const errors: ValidationError[] = [];
         const warnings: ValidationWarning[] = [];
 

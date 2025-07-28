@@ -34,8 +34,8 @@ export interface UserEngine {
   getSchema(name: string): Schema | undefined;
   getAllComponents(): Record<string, any>;
   getAllComponentNames(): string[];
-  getAllSchemas(): Schema[];
-  getSchemasByPlatform(platform: Platform): Schema[];
+  getAllSchemas(): ComponentSchema[];
+  getSchemasByPlatform(platform: Platform): ComponentSchema[];
   
   // === РЕНДЕРЕРЫ ПЛАТФОРМ ===
   registerAdapter(adapter: RenderPlatform): void;
@@ -44,11 +44,11 @@ export interface UserEngine {
   getAllAdapters(): RenderPlatform[];
   
   // === РЕНДЕРИНГ ===
-  renderWithAdapter(spec: Face, adapterId: string): any;
-  renderWithAllAdapters(spec: Face): Record<string, any>;
+  renderWithAdapter(spec: UserFace, adapterId: string): any;
+  renderWithAllAdapters(spec: UserFace): Record<string, any>;
   
   // === ЖИЗНЕННЫЙ ЦИКЛ ===
-  updateComponent(name: string, component: any): Schema | null;
+  updateComponent(name: string, component: any): ComponentSchema | null;
   removeComponent(name: string): boolean;
   clearCache(): void;
   clear(): void;
@@ -57,14 +57,14 @@ export interface UserEngine {
   getStats(): any;
   
   // === API ДЛЯ КОНВЕРТЕРА ===
-  exportSchema(name: string): Schema | null;
-  exportAllSchemas(): Schema[];
-  validateMigration(sourceSchema: Schema, targetPlatform: Platform): any;
+  exportSchema(name: string): ComponentSchema | null;
+  exportAllSchemas(): ComponentSchema[];
+  validateMigration(sourceSchema: ComponentSchema, targetPlatform: Platform): any;
 }
 
 // Провайдер контекста
 export interface ContextProvider {
-  initialize(face: Face, options?: any): void;
+  initialize(face: UserFace, options?: any): void;
   getData(): any;
   updateData(data: any): void;
   cleanup(): void;

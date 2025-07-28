@@ -1,11 +1,11 @@
-import { UserFace } from './types';
+import { Face } from './types';
 import { logger } from './logger';
 
 export interface FallbackComponent {
     component: string;
     props: Record<string, any>;
     error?: Error;
-    originalSpec?: UserFace;
+    originalSpec?: Face;
 }
 
 export type RecoveryStrategy = 'fallback' | 'retry' | 'ignore' | 'throw';
@@ -20,7 +20,7 @@ export interface RecoveryConfig {
 export class ErrorRecovery {
     private defaultFallback = 'div';
 
-    handleComponentError(error: Error, spec: UserFace, config?: RecoveryConfig): FallbackComponent {
+    handleComponentError(error: Error, spec: Face, config?: RecoveryConfig): FallbackComponent {
         const recoveryConfig = config || this.getDefaultConfig();
         
         logger.warn(`Component error occurred: ${spec.component} - ${error.message} (strategy: ${recoveryConfig.strategy})`);
@@ -38,7 +38,7 @@ export class ErrorRecovery {
         }
     }
 
-    createFallbackComponent(error: Error, spec: UserFace, fallbackComponent?: string): FallbackComponent {
+    createFallbackComponent(error: Error, spec: Face, fallbackComponent?: string): FallbackComponent {
         const component = fallbackComponent || this.defaultFallback;
         
         return {
@@ -59,7 +59,7 @@ export class ErrorRecovery {
         };
     }
 
-    createSilentFallback(spec: UserFace): FallbackComponent {
+    createSilentFallback(spec: Face): FallbackComponent {
         return {
             component: this.defaultFallback,
             props: {
@@ -70,7 +70,7 @@ export class ErrorRecovery {
         };
     }
 
-    retryComponent(spec: UserFace, config: RecoveryConfig): FallbackComponent {
+    retryComponent(spec: Face, config: RecoveryConfig): FallbackComponent {
         const maxRetries = config.maxRetries || 3;
         
         // В реальной реализации здесь была бы логика повторных попыток
@@ -84,7 +84,7 @@ export class ErrorRecovery {
         );
     }
 
-    formatErrorMessage(error: Error, spec: UserFace): string {
+    formatErrorMessage(error: Error, spec: Face): string {
         return `Error rendering component '${spec.component}': ${error.message}`;
     }
 

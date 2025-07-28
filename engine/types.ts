@@ -30,7 +30,7 @@ export type TypeFace =
 export type Type = TypeBase | TypePlatform | TypeUI | TypeFace;
 
 // Универсальный контейнер для всех компонентов
-export interface UserFace {
+export interface Face {
     component: string;
     id?: string;
     children?: any;
@@ -62,7 +62,7 @@ export interface UserFace {
 }
 
 // Валидация
-export function validateUserFace(spec: any): spec is UserFace {
+export function validateUserFace(spec: any): spec is Face {
   return (
     typeof spec === 'object' &&
     spec !== null &&

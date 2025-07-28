@@ -9,7 +9,7 @@ export type { LogLevel, LogEntry } from './engine/logger';
 
 // React adapter exports
 export { renderReact, RenderReact } from './engine/render-react';
-export { UserRenderer, UserContextProvider, useUserContext, useUserFace } from './engine/render-react';
+export { UserRenderer, ReactContextProvider, useUserContext, useUserFace } from './engine/render-react';
 
 // Vue adapter exports
 export { renderVue, RenderVue } from './engine/render-vue';
@@ -25,14 +25,14 @@ export { renderVanilla, RenderVanilla } from './engine/render-vanilla';
 
 // Type exports
 export type {
-  UserFace,
+  Face,
   Platform,
   Type
 } from './engine/types';
 
 // Schema exports
 export type {
-  ComponentSchema,
+  Schema,
   PropDefinition,
   EventDefinition,
   ComponentRegistration
@@ -92,6 +92,10 @@ export { runComprehensiveTests } from './comprehensive-tests';
 // Utility functions
 export { validateUserFace } from './engine/types';
 
+// Lifecycle and Events exports
+export { lifecycleManager as lifecycle } from './engine/lifecycle-manager';
+export { eventBus as events } from './engine/event-bus';
+
 // Auto-register renderers and components
 import { unifiedRegistry } from './engine/registry';
 import { renderReact } from './engine/render-react';
@@ -100,11 +104,9 @@ import { renderAngular } from './engine/render-angular';
 import { renderSvelte } from './engine/render-svelte';
 import { renderVanilla } from './engine/render-vanilla';
 
-// Инициализация с адаптерами
-unifiedRegistry.initializeWithAdapters([
-  { adapter: renderReact, name: 'React' },
-  { adapter: renderVue, name: 'Vue' },
-  { adapter: renderAngular, name: 'Angular' },
-  { adapter: renderSvelte, name: 'Svelte' },
-  { adapter: renderVanilla, name: 'Vanilla JS' }
-]);
+// Регистрация адаптеров
+unifiedRegistry.registerAdapter(renderReact);
+unifiedRegistry.registerAdapter(renderVue);
+unifiedRegistry.registerAdapter(renderAngular);
+unifiedRegistry.registerAdapter(renderSvelte);
+unifiedRegistry.registerAdapter(renderVanilla);

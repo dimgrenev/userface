@@ -10,24 +10,24 @@ import { logger } from './logger';
 export class EngineFactory {
   static createEngine(): Engine {
     // Создаем все сервисы
-    const componentRegistry = new ComponentRegistry();
+    const componentStore = new ComponentRegistry();
     
     // Используем существующие экземпляры
-    const dataLayerInstance = dataLayer;
-    const pluginSystemInstance = new PluginSystem(componentRegistry);
-    const validationEngineInstance = validationEngine;
-    const errorRecoveryInstance = errorRecovery;
-    const testingInfrastructureInstance = testingInfrastructure;
+    const dataService = dataLayer;
+    const pluginManager = new PluginSystem(componentStore);
+    const validator = validationEngine;
+    const errorHandler = errorRecovery;
+    const testRunner = testingInfrastructure;
     const loggerInstance = logger;
 
     // Создаем Engine с зависимостями
     const engine = new Engine(
-      componentRegistry,
-      dataLayerInstance,
-      pluginSystemInstance,
-      validationEngineInstance,
-      errorRecoveryInstance,
-      testingInfrastructureInstance,
+      componentStore,
+      dataService,
+      pluginManager,
+      validator,
+      errorHandler,
+      testRunner,
       loggerInstance
     );
 

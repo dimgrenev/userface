@@ -1,7 +1,7 @@
-import { ILifecycleManager, LifecycleCallback, ErrorCallback, LifecycleEvent } from './interfaces';
+import { ILifecycleHooks, LifecycleCallback, ErrorCallback, LifecycleEvent } from './interfaces';
 import { eventBus } from './event-bus';
 
-export class LifecycleManager implements ILifecycleManager {
+export class LifecycleManager implements ILifecycleHooks {
   private hooks: Map<LifecycleEvent, LifecycleCallback[]> = new Map();
   private errorCallbacks: ErrorCallback[] = [];
 

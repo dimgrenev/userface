@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ComponentSchema } from './schema';
+import { Schema } from './schema';
 import { Type } from './types';
 import { logger } from './logger';
 
@@ -14,7 +14,7 @@ declare global {
 export class ComponentAnalyzer {
   
   // Анализ компонента любой платформы
-  analyzeComponent(component: any, name: string): ComponentSchema {
+  analyzeComponent(component: any, name: string): Schema {
     // Определяем платформу по типу компонента
     if (React.isValidElement(component) || component.$$typeof) {
       return this.analyzeReactComponent(component, name);
@@ -39,7 +39,7 @@ export class ComponentAnalyzer {
     return this.analyzeVanillaComponent(component, name);
   }
 
-  private analyzeReactComponent(component: any, name: string): ComponentSchema {
+  private analyzeReactComponent(component: any, name: string): Schema {
     const props: any[] = [];
     
     // Анализируем propTypes если есть
@@ -86,7 +86,7 @@ export class ComponentAnalyzer {
     };
   }
 
-  private analyzeVueComponent(component: any, name: string): ComponentSchema {
+  private analyzeVueComponent(component: any, name: string): Schema {
     const props: any[] = [];
     
     if (component.props) {
@@ -124,7 +124,7 @@ export class ComponentAnalyzer {
     };
   }
 
-  private analyzeAngularComponent(component: any, name: string): ComponentSchema {
+  private analyzeAngularComponent(component: any, name: string): Schema {
     const props: any[] = [];
     
     // Анализируем Input декораторы
@@ -157,7 +157,7 @@ export class ComponentAnalyzer {
     };
   }
 
-  private analyzeSvelteComponent(component: any, name: string): ComponentSchema {
+  private analyzeSvelteComponent(component: any, name: string): Schema {
     const props: any[] = [];
     
     // Svelte компоненты обычно имеют $$render метод
@@ -192,7 +192,7 @@ export class ComponentAnalyzer {
     };
   }
 
-  private analyzeVanillaComponent(component: any, name: string): ComponentSchema {
+  private analyzeVanillaComponent(component: any, name: string): Schema {
     const props: any[] = [];
     
     // Vanilla JS компоненты - анализируем как функции

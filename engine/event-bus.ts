@@ -1,6 +1,6 @@
-import { IEventBus, EventCallback } from './interfaces';
+import { IEventHub, EventCallback } from './interfaces';
 
-export class EventBus implements IEventBus {
+export class EventBus implements IEventHub {
   private events: Map<string, EventCallback[]> = new Map();
 
   emit(event: string, data?: any): void {

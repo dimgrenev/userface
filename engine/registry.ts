@@ -1,34 +1,36 @@
-import { ComponentSchema, ComponentRegistration } from './schema';
-import { UserFace } from './types';
+import { Schema, ComponentRegistration } from './schema';
+import { Face } from './types';
 import { UserEngine } from './api';
 import { logger } from './logger';
 import { componentAnalyzer } from './analyzer';
-import { AdapterManager } from './adapter-manager';
-import { SystemInitializer } from './initializer';
-import { SystemMonitor } from './monitor';
-import { ComponentScanner } from './scanner';
+// Убираем неиспользуемые импорты
 import { validationEngine } from './validation';
 import { errorRecovery } from './error-recovery';
 import { dataLayer } from './data-layer';
 import { initializePluginSystem } from './plugin-system';
 import { testingInfrastructure } from '../testing-infrastructure';
 
-// Главный класс Registry - ядро системы
 export class Registry implements UserEngine {
-  // Компоненты (без дублирования)
+  // === ОСНОВНЫЕ КОМПОНЕНТЫ ===
   private components = new Map<string, any>();
+  private schemas = new Map<string, Schema>();
+  private adapters = new Map<string, any>();
   
-  // Кеш схем (встроенный)
-  private schemas = new Map<string, ComponentSchema>();
+  // Убираем дублирование
   
   // Хеши для валидации
   private componentHashes = new Map<string, string>();
+  private schemaHashes = new Map<string, string>();
   
-  // Модули
-  private adapterManager: AdapterManager;
-  private initializer: SystemInitializer;
-  private monitor: SystemMonitor;
-  private scanner: ComponentScanner;
+  // Статистика
+  private stats = {
+    totalComponents: 0,
+    totalSchemas: 0,
+    totalAdapters: 0,
+    lastUpdate: Date.now()
+  };
+
+  // === ИНТЕГРАЦИЯ С ДРУГИМИ СЕРВИСАМИ ===
   private validationEngine: typeof validationEngine;
   private errorRecovery: typeof errorRecovery;
   private dataLayer: typeof dataLayer;
@@ -36,63 +38,55 @@ export class Registry implements UserEngine {
   private testingInfrastructure: typeof testingInfrastructure;
 
   constructor() {
-    this.adapterManager = new AdapterManager();
-    this.initializer = new SystemInitializer();
-    this.monitor = new SystemMonitor();
-    this.scanner = new ComponentScanner();
+    logger.info('Registry initialized', 'Registry');
+    
+    // Инициализируем сервисы
     this.validationEngine = validationEngine;
     this.errorRecovery = errorRecovery;
     this.dataLayer = dataLayer;
     this.pluginSystem = initializePluginSystem(this);
     this.testingInfrastructure = testingInfrastructure;
-    logger.info('Registry initialized', 'Registry');
   }
 
   // === РЕГИСТРАЦИЯ ===
   
-  registerComponent(name: string, component: any): ComponentSchema {
+  registerComponent(name: string, component: any): Schema {
     const startTime = Date.now();
     
     try {
-      // Проверяем кеш схем
-      let schema = this.schemas.get(name);
+      // Анализируем компонент
+      const schema = componentAnalyzer.analyzeComponent(component, name);
       
-      if (!schema) {
-        // Анализируем компонент
-        schema = this.analyzeComponent(component, name);
-        if (schema) {
-          this.schemas.set(name, schema);
-        }
-      }
-      
-      // Сохраняем компонент (только один раз!)
+      // Сохраняем компонент и схему
       this.components.set(name, component);
+      this.schemas.set(name, schema);
       
-      // Отслеживаем метрики
-      this.monitor.trackRegistration(name, Date.now() - startTime);
+      // Обновляем статистику
+      this.stats.totalComponents++;
+      this.stats.lastUpdate = Date.now();
       
-      logger.info(`Registered component "${name}"`, 'Registry', { name, schema });
+      // Вычисляем хеши
+      this.componentHashes.set(name, this.computeHash(component));
+      this.schemaHashes.set(name, this.computeHash(schema));
       
-      return schema || this.createFallbackSchema(name);
+      logger.info(`Component registered: ${name}`, 'Registry', { 
+        name, 
+        schema: schema.name,
+        duration: Date.now() - startTime 
+      });
       
+      return schema;
     } catch (error) {
-      this.monitor.trackError(error as Error, { name });
-      logger.error(`Failed to register component "${name}"`, 'Registry', error as Error, { name });
-      
-      const fallbackSchema = this.createFallbackSchema(name);
-      this.components.set(name, component);
-      this.schemas.set(name, fallbackSchema);
-      return fallbackSchema;
+      logger.error(`Failed to register component: ${name}`, 'Registry', { name, error });
+      throw error;
     }
   }
 
-  // === ПОЛУЧЕНИЕ ДАННЫХ ===
-  
   getComponent(name: string): any | undefined {
     return this.components.get(name);
   }
 
-  getSchema(name: string): ComponentSchema | undefined {
+  getSchema(name: string): Schema | undefined {
     return this.schemas.get(name);
   }
 
@@ -100,247 +94,167 @@ export class Registry implements UserEngine {
     return Object.fromEntries(this.components);
   }
 
-  getAllSchemas(): ComponentSchema[] {
-    return Array.from(this.schemas.values());
-  }
-
   getAllComponentNames(): string[] {
     return Array.from(this.components.keys());
   }
 
-  getSchemasByPlatform(platform: string): ComponentSchema[] {
+  getAllSchemas(): Schema[] {
+    return Array.from(this.schemas.values());
+  }
+
+  getSchemasByPlatform(platform: string): Schema[] {
     return Array.from(this.schemas.values()).filter(schema => schema.platform === platform);
   }
 
-  hasComponent(name: string): boolean {
-    return this.components.has(name);
-  }
-
-  hasSchema(name: string): boolean {
-    return this.schemas.has(name);
-  }
-
-  // === МАССОВАЯ РЕГИСТРАЦИЯ ===
+  // === РЕНДЕРЕРЫ ПЛАТФОРМ ===
   
-  registerComponents(components: Record<string, any>): ComponentSchema[] {
-    const schemas: ComponentSchema[] = [];
-    
-    Object.entries(components).forEach(([name, component]) => {
-      const schema = this.registerComponent(name, component);
-      schemas.push(schema);
-    });
-    
-    return schemas;
+  registerAdapter(adapter: any): void {
+    const adapterId = adapter.id || `adapter-${this.adapters.size}`;
+    this.adapters.set(adapterId, adapter);
+    this.stats.totalAdapters++;
+    logger.info(`Adapter registered: ${adapterId}`, 'Registry');
   }
 
-  registerComponentWithSchema(registration: ComponentRegistration): void {
-    const { name, component, schema } = registration;
-    
-    this.components.set(name, component);
-    if (schema) {
-      this.schemas.set(name, schema);
+  reinstallAdapter(adapter: any): void {
+    const adapterId = adapter.id || `adapter-${this.adapters.size}`;
+    this.adapters.set(adapterId, adapter);
+    logger.info(`Adapter reinstalled: ${adapterId}`, 'Registry');
+  }
+
+  getAdapter(adapterId: string): any | undefined {
+    return this.adapters.get(adapterId);
+  }
+
+  getAllAdapters(): any[] {
+    return Array.from(this.adapters.values());
+  }
+
+  // === РЕНДЕРИНГ ===
+  
+  renderWithAdapter(spec: Face, adapterId: string): any {
+    const adapter = this.getAdapter(adapterId);
+    if (!adapter) {
+      throw new Error(`Adapter not found: ${adapterId}`);
     }
     
-          logger.info(`Registered component with schema "${name}"`, 'Registry', { name });
+    return adapter.render(spec);
   }
 
-  // === ОБНОВЛЕНИЕ И УДАЛЕНИЕ ===
+  renderWithAllAdapters(spec: Face): Record<string, any> {
+    const results: Record<string, any> = {};
+    
+    for (const [adapterId, adapter] of this.adapters) {
+      try {
+        results[adapterId] = adapter.render(spec);
+      } catch (error) {
+        logger.error(`Render failed for adapter: ${adapterId}`, 'Registry', { adapterId, error });
+        results[adapterId] = { error: error.message };
+      }
+    }
+    
+    return results;
+  }
+
+  // === ЖИЗНЕННЫЙ ЦИКЛ ===
   
-  updateComponent(name: string, component: any): ComponentSchema | null {
+  updateComponent(name: string, component: any): Schema | null {
     if (!this.components.has(name)) {
       logger.warn(`Cannot update non-existent component "${name}"`, 'Registry', { name });
       return null;
     }
     
-    // Обновляем компонент
+    const oldSchema = this.schemas.get(name);
+    const newSchema = componentAnalyzer.analyzeComponent(component, name);
+    
     this.components.set(name, component);
+    this.schemas.set(name, newSchema);
     
-    // Переанализируем схему
-    const schema = this.analyzeComponent(component, name);
-    this.schemas.set(name, schema);
-    
-          logger.info(`Updated component "${name}"`, 'Registry', { name, schema });
-    
-    return schema;
+    logger.info(`Component updated: ${name}`, 'Registry', { name });
+    return newSchema;
   }
 
   removeComponent(name: string): boolean {
-    const hadComponent = this.components.has(name);
-    const hadSchema = this.schemas.has(name);
-    
-    this.components.delete(name);
-    this.schemas.delete(name);
-    this.componentHashes.delete(name);
-    
-    if (hadComponent || hadSchema) {
-      logger.info(`Removed component "${name}"`, 'Registry', { name });
+    const removed = this.components.delete(name);
+    if (removed) {
+      this.schemas.delete(name);
+      this.componentHashes.delete(name);
+      this.schemaHashes.delete(name);
+      this.stats.totalComponents--;
+      logger.info(`Component removed: ${name}`, 'Registry', { name });
     }
-    
-    return hadComponent || hadSchema;
-  }
-
-  // === ОЧИСТКА ===
-  
-  clear(): void {
-    const componentCount = this.components.size;
-    const schemaCount = this.schemas.size;
-    
-    this.components.clear();
-    this.schemas.clear();
-    this.componentHashes.clear();
-    
-    logger.info(`Cleared registry`, 'Registry', { 
-      removedComponents: componentCount, 
-      removedSchemas: schemaCount 
-    });
+    return removed;
   }
 
   clearCache(): void {
-    const schemaCount = this.schemas.size;
+    this.componentHashes.clear();
+    this.schemaHashes.clear();
+    logger.info('Cache cleared', 'Registry');
+  }
+
+  clear(): void {
+    const count = this.components.size;
+    this.components.clear();
     this.schemas.clear();
     this.componentHashes.clear();
-    
-    logger.info(`Cleared cache`, 'Registry', { removedSchemas: schemaCount });
+    this.schemaHashes.clear();
+    this.stats.totalComponents = 0;
+    this.stats.totalSchemas = 0;
+    logger.info(`Registry cleared, removed ${count} components`, 'Registry');
   }
 
-  // === АДАПТЕРЫ (делегируем в AdapterManager) ===
+  // === СТАТИСТИКА ===
   
-  registerAdapter(adapter: any): void {
-    this.adapterManager.registerAdapter(adapter);
-  }
-
-  reinstallAdapter(adapter: any): void {
-    this.adapterManager.reinstallAdapter(adapter);
-  }
-
-  getAdapter(adapterId: string): any {
-    return this.adapterManager.getAdapter(adapterId);
-  }
-
-  getAllAdapters(): any[] {
-    return this.adapterManager.getAllAdapters();
-  }
-
-  renderWithAdapter(spec: any, adapterId: string): any {
-    const startTime = Date.now();
-    
-    try {
-      const result = this.adapterManager.renderWithAdapter(spec, adapterId);
-      this.monitor.trackRender(adapterId, Date.now() - startTime);
-      return result;
-    } catch (error) {
-      this.monitor.trackError(error as Error, { adapterId });
-      throw error;
-    }
-  }
-
-  // === ИНИЦИАЛИЗАЦИЯ (делегируем в SystemInitializer) ===
-  
-  initialize(): void {
-    this.initializer.initialize();
-  }
-
-  initializeWithAdapters(adapters: any[]): void {
-    this.initializer.initializeWithAdapters(adapters);
-  }
-
-  isSystemInitialized(): boolean {
-    return this.initializer.isSystemInitialized();
-  }
-
-  // === СКАНИРОВАНИЕ (делегируем в ComponentScanner) ===
-  
-  findUserfaceFolder() {
-    return this.scanner.findUserfaceFolder();
-  }
-
-  scanUserfaceFolder(userfacePath: string) {
-    return this.scanner.scanUserfaceFolder(userfacePath);
-  }
-
-  autoRegisterComponents(componentModule: any, prefix: string = '') {
-    return this.scanner.autoRegisterComponents(componentModule, prefix);
-  }
-
-  // === ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ ===
-  
-  renderWithAllAdapters(spec: any): Record<string, any> {
-    return this.adapterManager.renderWithAllAdapters(spec);
-  }
-
   getStats(): any {
     return {
-      components: this.getAllComponentNames().length,
-      schemas: this.getAllSchemas().length,
-      adapters: this.getAllAdapters().length,
-      system: this.monitor.getStats(),
-      performance: this.monitor.getPerformanceMetrics()
+      ...this.stats,
+      adapters: this.adapters.size,
+      hashes: {
+        components: this.componentHashes.size,
+        schemas: this.schemaHashes.size
+      }
     };
   }
 
-  exportSchema(name: string): ComponentSchema | null {
-    const schema = this.getSchema(name);
-    return schema || null;
-  }
-
-  exportAllSchemas(): ComponentSchema[] {
-    return this.getAllSchemas();
-  }
-
-  validateMigration(sourceSchema: any, targetPlatform: string): any {
-    // Используем логику из SchemaCache
-    const issues: string[] = [];
-    let compatibility = 100;
-    
-    // Проверяем совместимость платформ
-    if (sourceSchema.platform === targetPlatform) {
-      return { canMigrate: true, issues: [], compatibility: 100 };
+  // === API ДЛЯ КОНВЕРТЕРА ===
+  
+  exportSchema(name: string): Schema | null {
+    const schema = this.schemas.get(name);
+    if (!schema) {
+      logger.warn(`Schema not found for export: ${name}`, 'Registry', { name });
+      return null;
     }
     
-    // Простая валидация - в реальной реализации будет более сложная логика
-    logger.info(`Migration validation for ${sourceSchema.name} to ${targetPlatform}`, 'Registry', {
-      canMigrate: true,
-      compatibility: 100,
-      issuesCount: 0
-    });
+    return { ...schema };
+  }
+
+  exportAllSchemas(): Schema[] {
+    return Array.from(this.schemas.values()).map(schema => ({ ...schema }));
+  }
+
+  validateMigration(sourceSchema: Schema, targetPlatform: string): any {
+    // Простая валидация миграции
+    const targetAdapter = Array.from(this.adapters.values())
+      .find(adapter => adapter.id === targetPlatform);
     
-    return { canMigrate: true, issues, compatibility };
+    if (!targetAdapter) {
+      return { valid: false, error: `Target platform not found: ${targetPlatform}` };
+    }
+    
+    return { valid: true, adapter: targetAdapter };
   }
 
-  // === ПРИВАТНЫЕ МЕТОДЫ ===
-  
-  private analyzeComponent(component: any, name: string): ComponentSchema {
-    // Используем универсальный анализатор
-    return componentAnalyzer.analyzeComponent(component, name);
-  }
-
-  private createFallbackSchema(name: string): ComponentSchema {
-    return {
-      name,
-      platform: 'unknown',
-      props: [],
-      events: [],
-      children: false,
-      description: `Fallback schema for ${name}`
-    };
-  }
-
-  // === ПЛАГИН СИСТЕМА ===
+  // === ПЛАГИНЫ ===
   
   async registerPlugin(plugin: any, config?: any): Promise<void> {
-    return this.pluginSystem.registerPlugin(plugin, config);
+    await this.pluginSystem.registerPlugin(plugin, config);
   }
 
   async uninstallPlugin(pluginId: string): Promise<void> {
-    return this.pluginSystem.uninstallPlugin(pluginId);
+    await this.pluginSystem.uninstallPlugin(pluginId);
   }
 
-  async enablePlugin(pluginId: string): Promise<void> {
-    return this.pluginSystem.enablePlugin(pluginId);
-  }
-
-  async disablePlugin(pluginId: string): Promise<void> {
-    return this.pluginSystem.disablePlugin(pluginId);
+  getActivePlugins(): any[] {
+    return this.pluginSystem.getActivePlugins();
   }
 
   getPlugin(pluginId: string): any {
@@ -348,44 +262,53 @@ export class Registry implements UserEngine {
   }
 
   getAllPlugins(): any[] {
-    return this.pluginSystem.getPluginsByType('custom');
+    return this.pluginSystem.getAllPlugins();
   }
 
-  getActivePlugins(): any[] {
-    return this.pluginSystem.getPluginsByType('custom').filter((p: any) => p.status === 'enabled');
+  // === ВАЛИДАЦИЯ ===
+  
+  validateComponent(name: string): boolean {
+    const component = this.components.get(name);
+    const schema = this.schemas.get(name);
+    
+    if (!component || !schema) {
+      return false;
+    }
+    
+    return this.validationEngine.validateComponent(component, schema).isValid;
+  }
+
+  validateUserFace(spec: Face): boolean {
+    const schema = this.schemas.get(spec.component);
+    if (!schema) {
+      return false;
+    }
+    
+    return this.validationEngine.validateUserFace(spec, schema).isValid;
   }
 
   // === ТЕСТИРОВАНИЕ ===
   
-  addTestSuite(suite: any): void {
-    this.testingInfrastructure.addTestSuite(suite);
-  }
-
   async runAllTests(): Promise<any[]> {
     return this.testingInfrastructure.runAllTests();
   }
 
-  getTestResults(): any[] {
-    return this.testingInfrastructure.getTestResults();
+  createMockComponent(name: string, schema: Schema, render: (props: any) => any): any {
+    return this.testingInfrastructure.createMockComponent(name, schema, render);
   }
 
-  createMockComponent(name: string, schema: any, render: (props: any) => any): any {
-    this.testingInfrastructure.mockComponent(name, schema, render);
-    return { name, schema, render };
-  }
-
-  generateTestData(schema: any): UserFace {
-    return this.testingInfrastructure.generateRandomUserFace(schema);
+  generateTestData(schema: any): Face {
+    return this.testingInfrastructure.generateTestData(schema);
   }
 
   // === DATA LAYER ===
   
-  registerDataSource(path: string, config: any): void {
-    this.dataLayer.registerDataSource(path, config);
-  }
-
   async getData(path: string, options?: any): Promise<any> {
     return this.dataLayer.getData(path, options);
+  }
+
+  registerDataSource(path: string, config: any): void {
+    this.dataLayer.registerDataSource(path, config);
   }
 
   subscribeToData(path: string, callback: (data: any, state: any) => void): any {
@@ -396,39 +319,24 @@ export class Registry implements UserEngine {
     return this.dataLayer.getState(path);
   }
 
-  clearAllData(): void {
-    this.dataLayer.clearAllData();
-  }
-
-  getDataStats(): any {
-    return this.dataLayer.getStats();
-  }
-
-  // === РЕНДЕРИНГ ===
+  // === РЕНДЕРИНГ С ДАННЫМИ ===
   
-  async render(userFace: UserFace, adapterId: string): Promise<any> {
+  async render(userFace: Face, adapterId: string): Promise<any> {
     try {
       // Валидация
-      const schema = this.getSchema(userFace.component);
-      if (schema) {
-        const validation = this.validationEngine.validateUserFace(userFace, schema);
-        if (!validation.isValid) {
-          throw new Error(`Validation failed: ${validation.errors.map((e: any) => e.message).join(', ')}`);
-        }
+      if (!this.validateUserFace(userFace)) {
+        throw new Error(`Invalid UserFace: ${userFace.component}`);
       }
-
-      // Рендеринг с данными
-      const result = await this.renderWithData(userFace, adapterId);
       
-      return result;
+      // Рендеринг с данными
+      return await this.renderWithData(userFace, adapterId);
     } catch (error) {
-      // Простая обработка ошибки
-      console.error('Render error:', error);
+      logger.error(`Render failed: ${error.message}`, 'Registry', { userFace, adapterId, error });
       throw error;
     }
   }
 
-  async renderWithData(spec: UserFace, adapterId: string): Promise<any> {
+  async renderWithData(spec: Face, adapterId: string): Promise<any> {
     // Обрабатываем data свойства в UserFace
     if (spec.data) {
       for (const [key, dataConfig] of Object.entries(spec.data)) {
@@ -437,9 +345,32 @@ export class Registry implements UserEngine {
       }
     }
     
+    // Рендерим через адаптер
     return this.renderWithAdapter(spec, adapterId);
+  }
+
+  // === ПРИВАТНЫЕ МЕТОДЫ ===
+  
+  private computeHash(obj: any): string {
+    return JSON.stringify(obj).split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0).toString();
+  }
+
+  private analyzeComponent(component: any, name: string): Schema {
+    return componentAnalyzer.analyzeComponent(component, name);
+  }
+
+  private createFallbackSchema(name: string): Schema {
+    return {
+      name,
+      platform: 'universal',
+      props: [],
+      events: []
+    };
   }
 }
 
-// Экспортируем единственный экземпляр
+// Создаем глобальный экземпляр
 export const unifiedRegistry = new Registry(); 

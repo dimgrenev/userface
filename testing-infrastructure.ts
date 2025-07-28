@@ -1,5 +1,5 @@
-import { UserFace } from './engine/types';
-import { ComponentSchema } from './engine/schema';
+import { Face } from './engine/types';
+import { Schema } from './engine/schema';
 import { logger } from './engine/logger';
 
 export interface TestResult {
@@ -21,7 +21,7 @@ export interface TestCase {
 
 export interface MockComponent {
     name: string;
-    schema: ComponentSchema;
+    schema: Schema;
     render: (props: any) => any;
 }
 
@@ -67,7 +67,7 @@ export class TestingInfrastructure {
         return results;
     }
 
-    createMockComponent(name: string, schema: ComponentSchema, renderFn?: (props: any) => any): MockComponent {
+    createMockComponent(name: string, schema: Schema, renderFn?: (props: any) => any): MockComponent {
         const mockComponent: MockComponent = {
             name,
             schema,
@@ -86,8 +86,8 @@ export class TestingInfrastructure {
         return Array.from(this.mockComponents.values());
     }
 
-    generateTestData(schema: ComponentSchema): UserFace {
-        const testData: UserFace = {
+    generateTestData(schema: Schema): Face {
+        const testData: Face = {
             component: schema.name
         };
 
@@ -159,11 +159,11 @@ export class TestingInfrastructure {
         return allResults;
     }
 
-    generateRandomUserFace(schema: ComponentSchema): UserFace {
+    generateRandomUserFace(schema: Schema): Face {
         return this.generateTestData(schema);
     }
 
-    mockComponent(name: string, schema: ComponentSchema, render: (props: any) => any): void {
+    mockComponent(name: string, schema: Schema, render: (props: any) => any): void {
         this.createMockComponent(name, schema, render);
     }
 }

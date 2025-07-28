@@ -1,43 +1,44 @@
-import { UserFace, ComponentSchema } from './types';
-import { IComponentRegistry, IDataLayer, IPluginSystem, IValidationEngine, IErrorRecovery, ITestingInfrastructure, ILogger } from './interfaces';
+import { Face } from './types';
+import { Schema } from './schema';
+import { IComponentStore, IDataService, IPluginManager, IValidator, IErrorHandler, ITestRunner, ILogger } from './interfaces';
 import { lifecycleManager } from './lifecycle-manager';
 import { eventBus } from './event-bus';
 
 export class Engine {
-  private componentRegistry: any;
-  private dataLayer: any;
-  private pluginSystem: any;
-  private validationEngine: any;
-  private errorRecovery: any;
-  private testingInfrastructure: any;
+  private componentStore: any;
+  private dataService: any;
+  private pluginManager: any;
+  private validator: any;
+  private errorHandler: any;
+  private testRunner: any;
   private logger: any;
 
   constructor(
-    componentRegistry: any,
-    dataLayer: any,
-    pluginSystem: any,
-    validationEngine: any,
-    errorRecovery: any,
-    testingInfrastructure: any,
+    componentStore: any,
+    dataService: any,
+    pluginManager: any,
+    validator: any,
+    errorHandler: any,
+    testRunner: any,
     logger: any
   ) {
-    this.componentRegistry = componentRegistry;
-    this.dataLayer = dataLayer;
-    this.pluginSystem = pluginSystem;
-    this.validationEngine = validationEngine;
-    this.errorRecovery = errorRecovery;
-    this.testingInfrastructure = testingInfrastructure;
+    this.componentStore = componentStore;
+    this.dataService = dataService;
+    this.pluginManager = pluginManager;
+    this.validator = validator;
+    this.errorHandler = errorHandler;
+    this.testRunner = testRunner;
     this.logger = logger;
 
     this.logger.info('Engine initialized');
   }
 
   // === КОМПОНЕНТЫ ===
-  async registerComponent(name: string, component: any, schema?: ComponentSchema): Promise<void> {
+  async registerComponent(name: string, component: any, schema?: Schema): Promise<void> {
     try {
       await lifecycleManager.executeLifecycle('beforeRegister', { name, component, schema });
       
-      this.componentRegistry.registerComponent(name, component, schema);
+      this.componentStore.registerComponent(name, component, schema);
       
       await lifecycleManager.executeLifecycle('afterRegister', { name, component, schema });
       this.logger.info(`Component registered: ${name}`);
@@ -47,15 +48,15 @@ export class Engine {
   }
 
   getComponent(name: string): any {
-    return this.componentRegistry.getComponent(name);
+    return this.componentStore.getComponent(name);
   }
 
-  getComponentSchema(name: string): ComponentSchema | null {
-    return this.componentRegistry.getComponentSchema(name);
+  getComponentSchema(name: string): Schema | null {
+    return this.componentStore.getComponentSchema(name);
   }
 
   // === РЕНДЕРИНГ ===
-  async render(userFace: UserFace, adapterId: string): Promise<any> {
+  async render(userFace: Face, adapterId: string): Promise<any> {
     try {
       await lifecycleManager.executeLifecycle('beforeRender', { userFace, adapterId });
       
@@ -69,7 +70,7 @@ export class Engine {
       // }
 
       // Простой рендеринг - возвращаем компонент с данными
-      const component = this.componentRegistry.getComponent(userFace.component);
+      const component = this.componentStore.getComponent(userFace.component);
       if (!component) {
         throw new Error(`Component not found: ${userFace.component}`);
       }
@@ -77,7 +78,7 @@ export class Engine {
       // Обрабатываем data свойства в UserFace
       if (userFace.data) {
         for (const [key, dataConfig] of Object.entries(userFace.data)) {
-          const data = await this.dataLayer.getData(dataConfig.source, dataConfig.config);
+          const data = await this.dataService.getData(dataConfig.source, dataConfig.config);
           userFace[key] = data;
         }
       }
@@ -97,51 +98,51 @@ export class Engine {
     }
   }
 
-  // === DATA LAYER ===
+  // === DATA SERVICE ===
   registerDataSource(path: string, config: any): void {
-    this.dataLayer.registerDataSource(path, config);
+    this.dataService.registerDataSource(path, config);
   }
 
   async getData(path: string, options?: any): Promise<any> {
-    return this.dataLayer.getData(path, options);
+    return this.dataService.getData(path, options);
   }
 
   subscribeToData(path: string, callback: (data: any, state: any) => void): any {
-    return this.dataLayer.subscribe(path, callback);
+    return this.dataService.subscribe(path, callback);
   }
 
   getDataState(path: string): any {
-    return this.dataLayer.getState(path);
+    return this.dataService.getState(path);
   }
 
   // === ПЛАГИНЫ ===
   async registerPlugin(plugin: any, config?: any): Promise<void> {
-    await this.pluginSystem.registerPlugin(plugin, config);
+    await this.pluginManager.registerPlugin(plugin, config);
   }
 
   async uninstallPlugin(pluginId: string): Promise<void> {
-    await this.pluginSystem.uninstallPlugin(pluginId);
+    await this.pluginManager.uninstallPlugin(pluginId);
   }
 
   getActivePlugins(): any[] {
-    return this.pluginSystem.getActivePlugins();
+    return this.pluginManager.getActivePlugins();
   }
 
   getPlugin(pluginId: string): any {
-    return this.pluginSystem.getPlugin(pluginId);
+    return this.pluginManager.getPlugin(pluginId);
   }
 
   getAllPlugins(): any[] {
-    return this.pluginSystem.getAllPlugins();
+    return this.pluginManager.getAllPlugins();
   }
 
   // === ТЕСТИРОВАНИЕ ===
   async runAllTests(): Promise<any[]> {
-    return this.testingInfrastructure.runAllTests();
+    return this.testRunner.runAllTests();
   }
 
-  createMockComponent(name: string, schema: ComponentSchema, render: (props: any) => any): any {
-    return this.testingInfrastructure.createMockComponent(name, schema, render);
+  createMockComponent(name: string, schema: Schema, render: (props: any) => any): any {
+    return this.testRunner.createMockComponent(name, schema, render);
   }
 
   // === ЖИЗНЕННЫЙ ЦИКЛ ===
@@ -195,11 +196,11 @@ export class Engine {
   // === СТАТИСТИКА ===
   getStats(): any {
     return {
-      components: this.componentRegistry.getAllComponents().size,
-      plugins: this.pluginSystem.getAllPlugins().length,
-      activePlugins: this.pluginSystem.getActivePlugins().length,
-      dataSources: this.dataLayer.getDataStats().totalSources,
-      testResults: this.testingInfrastructure.getTestResults().length
+      components: this.componentStore.getAllComponents().size,
+      plugins: this.pluginManager.getAllPlugins().length,
+      activePlugins: this.pluginManager.getActivePlugins().length,
+      dataSources: this.dataService.getDataStats().totalSources,
+      testResults: this.testRunner.getTestResults().length
     };
   }
 } 

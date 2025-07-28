@@ -1,4 +1,4 @@
-import { UserFace } from './types';
+import { Face } from './types';
 import { RenderPlatform, Renderer } from './api';
 import { ComponentNotFoundError } from './errors';
 import { unifiedRegistry } from './registry';
@@ -46,7 +46,7 @@ export class RenderVanilla implements RenderPlatform {
   ];
   
   // Рендеринг компонента
-  render(spec: UserFace): any {
+  render(spec: Face): any {
     const { component, ...props } = spec;
     
     // Получаем компонент из глобального реестра
@@ -73,7 +73,7 @@ export class RenderVanilla implements RenderPlatform {
   }
   
   // Валидация спецификации
-  validateSpec(spec: UserFace): boolean {
+  validateSpec(spec: Face): boolean {
     if (!spec.component || typeof spec.component !== 'string') {
       return false;
     }

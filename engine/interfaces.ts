@@ -1,146 +1,108 @@
+import { Face } from './types';
+import { Schema } from './schema';
+
 // ===== ОСНОВНЫЕ ИНТЕРФЕЙСЫ ДВИЖКА =====
 
-export interface IComponentRegistry {
-  registerComponent(name: string, component: any, schema?: ComponentSchema): void;
+export interface IComponentStore {
+  registerComponent(name: string, component: any, schema?: Schema): void;
   getComponent(name: string): any;
-  getComponentSchema(name: string): ComponentSchema | null;
+  getComponentSchema(name: string): Schema | null;
   getAllComponents(): Map<string, any>;
-  getAllSchemas(): Map<string, ComponentSchema>;
+  getAllSchemas(): Map<string, Schema>;
   removeComponent(name: string): void;
   clear(): void;
+  hasComponent(name: string): boolean;
+  getComponentCount(): number;
+  getComponentNames(): string[];
+  updateComponentSchema(name: string, schema: Schema): void;
+  validateComponent(name: string): boolean;
 }
 
-export interface IDataLayer {
-  registerDataSource(path: string, config: DataSourceConfig): void;
-  getData(path: string, options?: DataOptions): Promise<any>;
-  subscribeToData(path: string, callback: DataCallback): DataSubscription;
-  getDataState(path: string): DataState | null;
+export interface IDataService {
+  registerDataSource(path: string, config: any): void;
+  getData(path: string, options?: any): Promise<any>;
+  subscribe(path: string, callback: (data: any, state: any) => void): any;
+  getState(path: string): any;
+  clearCache(path?: string): void;
+  getDataStats(): any;
   clearAllData(): void;
-  getDataStats(): DataStats;
-  renderWithData(spec: UserFace, adapterId: string): Promise<any>;
+  renderWithData(spec: Face, adapterId: string): Promise<any>;
 }
 
-export interface IPluginSystem {
-  registerPlugin(plugin: Plugin, config?: PluginConfig): Promise<void>;
+export interface IPluginManager {
+  registerPlugin(plugin: any, config?: any): Promise<void>;
   uninstallPlugin(pluginId: string): Promise<void>;
-  enablePlugin(pluginId: string): Promise<void>;
-  disablePlugin(pluginId: string): Promise<void>;
-  getPlugin(pluginId: string): Plugin | null;
-  getAllPlugins(): Plugin[];
-  getActivePlugins(): Plugin[];
-  executeHook(hookName: string, context: any): Promise<any>;
+  getActivePlugins(): any[];
+  getPlugin(pluginId: string): any;
+  getAllPlugins(): any[];
 }
 
-export interface IValidationEngine {
-  validateUserFace(spec: UserFace, schema: ComponentSchema): ValidationResult;
-  validateComponent(component: any, schema: ComponentSchema): ValidationResult;
-  addCustomValidator(name: string, validator: ValidatorFunction): void;
+export interface IValidator {
+  validateUserFace(spec: Face, schema: Schema): any;
+  validateComponent(component: any, schema: Schema): any;
+  addCustomValidator(name: string, validator: any): void;
   removeCustomValidator(name: string): void;
 }
 
-export interface IErrorRecovery {
-  handleError(error: Error, context: ErrorContext): Promise<RecoveryResult>;
+export interface IErrorHandler {
+  handleError(error: Error, context: any): Promise<any>;
   setFallbackComponent(name: string, component: any): void;
-  setRecoveryStrategy(strategy: RecoveryStrategy): void;
-  getRecoveryStats(): RecoveryStats;
+  handleComponentError(error: Error, spec: Face, config?: any): any;
+  getRecoveryStats(): any;
+  getRecommendedStrategy(error: Error): string;
 }
 
-export interface ITestingInfrastructure {
-  addTestSuite(suite: TestSuite): void;
-  runAllTests(): Promise<TestResult[]>;
-  getTestResults(): TestResult[];
-  createMockComponent(name: string, schema: ComponentSchema, render: MockRenderFunction): MockComponent;
-  generateTestData(schema: ComponentSchema): UserFace;
-  setTestEnvironment(env: TestEnvironment): void;
+export interface ITestRunner {
+  addTestSuite(suite: any): void;
+  runAllTests(): Promise<any[]>;
+  getTestResults(): any[];
+  createMockComponent(name: string, schema: Schema, render: any): any;
+  generateTestData(schema: Schema): Face;
+  setTestEnvironment(env: any): void;
 }
 
 export interface ILogger {
-  log(level: LogLevel, message: string, context?: any): void;
-  debug(message: string, context?: any): void;
   info(message: string, context?: any): void;
   warn(message: string, context?: any): void;
   error(message: string, context?: any): void;
-  setLevel(level: LogLevel): void;
-  getLogs(): LogEntry[];
+  debug(message: string, context?: any): void;
+  getLogs(): any[];
+  clearLogs(): void;
 }
 
 // ===== ИНТЕРФЕЙСЫ ЖИЗНЕННОГО ЦИКЛА =====
 
-export interface ILifecycleManager {
-  onBeforeRegister(callback: LifecycleCallback): void;
-  onAfterRegister(callback: LifecycleCallback): void;
-  onBeforeRender(callback: LifecycleCallback): void;
-  onAfterRender(callback: LifecycleCallback): void;
-  onError(callback: ErrorCallback): void;
-  executeLifecycle(event: LifecycleEvent, context: any): Promise<void>;
+export interface ILifecycleHooks {
+  onBeforeRegister(callback: any): void;
+  onAfterRegister(callback: any): void;
+  onBeforeRender(callback: any): void;
+  onAfterRender(callback: any): void;
+  onError(callback: any): void;
+  executeLifecycle(event: string, context: any): Promise<void>;
+  handleError(error: Error, context: any): Promise<void>;
 }
+
+export type LifecycleEvent = 'beforeRegister' | 'afterRegister' | 'beforeRender' | 'afterRender' | 'onError';
+export type LifecycleCallback = (context: any) => void | Promise<void>;
+export type ErrorCallback = (error: Error, context: any) => void | Promise<void>;
 
 // ===== ИНТЕРФЕЙСЫ СОБЫТИЙ =====
 
-export interface IEventBus {
+export interface IEventHub {
   emit(event: string, data?: any): void;
-  on(event: string, callback: EventCallback): void;
-  off(event: string, callback: EventCallback): void;
-  once(event: string, callback: EventCallback): void;
+  on(event: string, callback: any): void;
+  off(event: string, callback: any): void;
+  once(event: string, callback: any): void;
   clear(): void;
+  getEventCount(): number;
 }
 
-// ===== ТИПЫ ДЛЯ ИНТЕРФЕЙСОВ =====
-
-export type LifecycleCallback = (context: any) => void | Promise<void>;
-export type ErrorCallback = (error: Error, context: any) => void | Promise<void>;
 export type EventCallback = (data?: any) => void;
-export type ValidatorFunction = (value: any, schema: any) => ValidationResult;
-export type MockRenderFunction = (props: any) => any;
-export type DataCallback = (data: any, state: DataState) => void;
 
-export type LifecycleEvent = 'beforeRegister' | 'afterRegister' | 'beforeRender' | 'afterRender' | 'error';
+// ===== ТИПЫ ДЛЯ ОШИБОК =====
 
 export interface ErrorContext {
-  component?: string;
   operation?: string;
   data?: any;
-  userFace?: UserFace;
-}
-
-export interface RecoveryResult {
-  success: boolean;
-  fallback?: any;
-  retry?: boolean;
-  error?: Error;
-}
-
-export interface RecoveryStats {
-  totalErrors: number;
-  recoveredErrors: number;
-  fallbackUsed: number;
-  retries: number;
-}
-
-export interface DataStats {
-  totalSources: number;
-  activeSubscriptions: number;
-  cacheSize: number;
-  lastUpdate: number;
-}
-
-// ===== СУЩЕСТВУЮЩИЕ ТИПЫ (импортируем из других файлов) =====
-
-import { 
-  UserFace, 
-  ComponentSchema, 
-  DataSourceConfig, 
-  DataState, 
-  DataSubscription,
-  DataOptions,
-  Plugin,
-  PluginConfig,
-  ValidationResult,
-  RecoveryStrategy,
-  TestSuite,
-  TestResult,
-  MockComponent,
-  TestEnvironment,
-  LogLevel,
-  LogEntry
-} from './types'; 
+  userFace?: Face;
+} 
