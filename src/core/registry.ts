@@ -219,13 +219,21 @@ export class Registry implements UserEngine {
       const result = this.findUserfaceFolder();
       
       if (result.found) {
-        logger.info('Userface folder found, auto-registration skipped for now', 'Registry');
-        // TODO: Implement auto-registration without external dependency
+        const components = this.scanUserfaceFolder(result.path!);
+        
+        if (components.length > 0) {
+          components.forEach((component: { path: string; name: string; module: any }) => {
+            this.autoRegisterComponent(component.module, component.name);
+          });
+          logger.info(`Auto-registered ${components.length} components`, 'Registry');
+        } else {
+          logger.info('No components found in userface folder', 'Registry');
+        }
       } else {
         logger.info('No userface folder found', 'Registry');
       }
     } catch (error) {
-      logger.warn('Auto-registration not available', 'Registry', { error });
+      logger.warn('Auto-registration failed', 'Registry', { error });
     }
 
     logger.info('Registry full initialization completed', 'Registry');
@@ -359,6 +367,117 @@ export class Registry implements UserEngine {
       logger.debug(`Error searching in directory: ${dir}`, 'Registry', error as Error);
       return null;
     }
+  }
+
+  // === СКАНИРОВАНИЕ КОМПОНЕНТОВ ===
+  
+  private scanUserfaceFolder(userfacePath: string): Array<{ path: string; name: string; module: any }> {
+    const foundComponents: Array<{ path: string; name: string; module: any }> = [];
+    
+    try {
+      if (typeof window !== 'undefined') return foundComponents;
+
+      const fs = require('fs');
+      const path = require('path');
+
+      if (!fs.existsSync(userfacePath)) {
+        logger.warn('Userface folder not found', 'Registry', { userfacePath });
+        return foundComponents;
+      }
+
+      this.scanComponentsRecursively(userfacePath, foundComponents);
+      
+      logger.info(`Scanned ${foundComponents.length} components`, 'Registry', { userfacePath, count: foundComponents.length });
+      
+    } catch (error) {
+      logger.error('Error scanning components', 'Registry', error as Error);
+    }
+
+    return foundComponents;
+  }
+
+  private scanComponentsRecursively(dir: string, foundComponents: Array<{ path: string; name: string; module: any }>, depth: number = 0): void {
+    if (typeof window !== 'undefined' || depth > 5) return;
+    
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const items = fs.readdirSync(dir);
+
+      for (const item of items) {
+        const itemPath = path.join(dir, item);
+        const stats = fs.statSync(itemPath);
+
+        if (stats.isDirectory() && !this.shouldSkipDirectory(item)) {
+          this.scanComponentsRecursively(itemPath, foundComponents, depth + 1);
+        } else if (stats.isFile() && this.isComponentFile(item)) {
+          const component = this.tryLoadComponent(itemPath);
+          if (component) {
+            foundComponents.push(component);
+          }
+        }
+      }
+    } catch (error) {
+      logger.debug(`Error scanning directory: ${dir}`, 'Registry', error as Error);
+    }
+  }
+
+  private shouldSkipDirectory(dirName: string): boolean {
+    const skipDirs = ['.git', 'node_modules', 'dist', 'build', '.next', '.nuxt', '.cache', 'coverage'];
+    return skipDirs.includes(dirName) || dirName.startsWith('.');
+  }
+
+  private isComponentFile(fileName: string): boolean {
+    const componentExtensions = ['.tsx', '.ts', '.jsx', '.js'];
+    const componentPatterns = [/component/i, /\.spec\./, /\.test\./, /\.stories\./];
+    
+    const hasComponentExt = componentExtensions.some(ext => fileName.endsWith(ext));
+    const isComponentFile = componentPatterns.some(pattern => pattern.test(fileName));
+    
+    return hasComponentExt && !isComponentFile;
+  }
+
+  private tryLoadComponent(filePath: string): { path: string; name: string; module: any } | null {
+    try {
+      if (typeof window !== 'undefined') return null;
+
+      const fs = require('fs');
+      const path = require('path');
+
+      const content = fs.readFileSync(filePath, 'utf8');
+      if (!this.hasExports(content)) return null;
+
+      const module = require(filePath);
+      if (!module || typeof module !== 'object') return null;
+
+      const fileName = path.basename(filePath, path.extname(filePath));
+      const componentName = this.extractComponentName(fileName, content);
+
+      return {
+        path: filePath,
+        name: componentName,
+        module
+      };
+    } catch (error) {
+      logger.debug(`Failed to load component: ${filePath}`, 'Registry', error as Error);
+      return null;
+    }
+  }
+
+  private hasExports(content: string): boolean {
+    return /export\s+(default|{|const|function|class)/.test(content);
+  }
+
+  private extractComponentName(fileName: string, content: string): string {
+    // Ищем имя компонента в экспорте
+    const exportMatch = content.match(/export\s+(default|{.*?})\s+(\w+)/);
+    if (exportMatch) {
+      return exportMatch[2].toLowerCase();
+    }
+    
+    // Иначе используем имя файла
+    return fileName.toLowerCase();
   }
 
   // === ЭКСПОРТ И ВАЛИДАЦИЯ ===
