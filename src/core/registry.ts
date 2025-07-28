@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ComponentSchema, ComponentRegistration } from './schema';
 import { Type } from './types';
+import { RenderPlatform, UserEngine } from './api';
 import { logger } from './logger';
 
 // Расширяем Reflect для Angular метаданных
@@ -10,8 +11,8 @@ declare global {
   }
 }
 
-// Реестр компонентов с встроенным кешем
-export class Registry {
+// Универсальный реестр компонентов и рендереров
+export class Registry implements UserEngine {
   // Компоненты (без дублирования)
   private components = new Map<string, any>();
   
@@ -20,6 +21,9 @@ export class Registry {
   
   // Хеши для валидации
   private componentHashes = new Map<string, string>();
+  
+  // Адаптеры рендереров
+  private adapters = new Map<string, RenderPlatform>();
   
   // Статистика
   private stats = {
@@ -158,6 +162,7 @@ export class Registry {
     this.components.clear();
     this.schemas.clear();
     this.componentHashes.clear();
+    this.adapters.clear();
     this.stats = { totalComponents: 0, totalSchemas: 0, errors: 0 };
   }
 
@@ -165,6 +170,74 @@ export class Registry {
     this.schemas.clear();
     this.componentHashes.clear();
     this.stats.totalSchemas = 0;
+  }
+
+  // === ИНИЦИАЛИЗАЦИЯ ===
+  
+  private lastInitializedVersion: string | null = null;
+
+  initialize(): void {
+    const currentVersion = this.getCurrentVersion();
+    
+    if (this.lastInitializedVersion === currentVersion) {
+      logger.warn('Registry already initialized with current version - skipping', 'Registry');
+      return;
+    }
+    
+    if (this.lastInitializedVersion && this.lastInitializedVersion !== currentVersion) {
+      logger.info(`Registry version updated: ${this.lastInitializedVersion} → ${currentVersion}`, 'Registry');
+      this.clearCache();
+    }
+
+    this.lastInitializedVersion = currentVersion;
+    logger.info(`Registry initialization completed (version ${currentVersion})`, 'Registry');
+  }
+
+  private getCurrentVersion(): string {
+    try {
+      if (typeof require !== 'undefined') {
+        const packageJson = require('../../package.json');
+        return packageJson.version;
+      }
+    } catch {
+      // Fallback
+    }
+    return '1.0.7';
+  }
+
+  // === АВТОРЕГИСТРАЦИЯ ===
+  
+  autoRegisterComponents(componentModule: any, prefix: string = ''): void {
+    try {
+      Object.entries(componentModule).forEach(([name, component]) => {
+        if (typeof component !== 'function' || name.startsWith('_')) {
+          return;
+        }
+        
+        const componentName = prefix ? `${prefix}-${name.toLowerCase()}` : name.toLowerCase();
+        this.registerComponent(componentName, component);
+        
+        logger.info(`Auto-registered component: ${componentName}`, 'Registry');
+      });
+      
+      logger.info(`Auto-registration completed for ${Object.keys(componentModule).length} components`, 'Registry');
+    } catch (error) {
+      logger.error('Auto-registration failed', 'Registry', error as Error);
+    }
+  }
+
+  autoRegisterComponent(component: any, componentName: string): void {
+    try {
+      if (typeof component !== 'function') {
+        logger.warn(`Skipping non-function component: ${componentName}`, 'Registry');
+        return;
+      }
+      
+      this.registerComponent(componentName.toLowerCase(), component);
+      logger.info(`Auto-registered component: ${componentName}`, 'Registry');
+    } catch (error) {
+      logger.error(`Failed to register component: ${componentName}`, 'Registry', error as Error);
+    }
   }
 
   // === ЭКСПОРТ И ВАЛИДАЦИЯ ===
@@ -218,8 +291,77 @@ export class Registry {
   getStats() {
     return {
       ...this.stats,
-      validSchemas: this.componentHashes.size
+      validSchemas: this.componentHashes.size,
+      adapters: {
+        total: this.adapters.size,
+        available: Array.from(this.adapters.keys())
+      }
     };
+  }
+
+  // === АДАПТЕРЫ РЕНДЕРЕРОВ ===
+  
+  registerAdapter(adapter: RenderPlatform): void {
+    this.adapters.set(adapter.id, adapter);
+    logger.info(`Registered adapter "${adapter.id}"`, 'Registry', { adapterId: adapter.id, adapter });
+  }
+
+  reinstallAdapter(adapter: RenderPlatform): void {
+    this.adapters.delete(adapter.id);
+    logger.info(`Removed old adapter "${adapter.id}"`, 'Registry', { adapterId: adapter.id });
+    
+    this.adapters.set(adapter.id, adapter);
+    logger.info(`Reinstalled adapter "${adapter.id}"`, 'Registry', { adapterId: adapter.id, adapter });
+  }
+
+  getAdapter(adapterId: string): RenderPlatform | undefined {
+    return this.adapters.get(adapterId);
+  }
+
+  getAllAdapters(): RenderPlatform[] {
+    return Array.from(this.adapters.values());
+  }
+
+  // === РЕНДЕРИНГ ===
+  
+  renderWithAdapter(spec: any, adapterId: string): any {
+    try {
+      const adapter = this.getAdapter(adapterId);
+      if (!adapter) {
+        logger.warn(`Adapter not found: ${adapterId}`, 'Registry', { adapterId, spec });
+        return null;
+      }
+      
+      if (!adapter.validateSpec(spec)) {
+        logger.warn(`Invalid spec for adapter ${adapterId}`, 'Registry', { adapterId, spec });
+        return null;
+      }
+      
+      return adapter.render(spec);
+      
+    } catch (error) {
+      logger.error(`Failed to render with adapter ${adapterId}`, 'Registry', error as Error, { adapterId, spec });
+      return null;
+    }
+  }
+
+  renderWithAllAdapters(spec: any): Record<string, any> {
+    const results: Record<string, any> = {};
+    
+    for (const [adapterId, adapter] of Array.from(this.adapters.entries())) {
+      try {
+        if (adapter.validateSpec(spec)) {
+          results[adapterId] = adapter.render(spec);
+        } else {
+          results[adapterId] = null;
+        }
+      } catch (error) {
+        logger.warn(`Failed to render with adapter ${adapterId}`, 'Registry', error as Error);
+        results[adapterId] = null;
+      }
+    }
+    
+    return results;
   }
 
   // === АНАЛИЗ КОМПОНЕНТОВ ===

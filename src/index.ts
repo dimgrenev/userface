@@ -1,13 +1,9 @@
 // Core exports
-export { engine } from './core/engine';
-export { unifiedRegistry } from './core/registry';
+export { unifiedRegistry as engine, unifiedRegistry } from './core/registry';
 
 // Logging
 export { logger } from './core/logger';
 export type { LogLevel, LogEntry } from './core/logger';
-
-// Auto-registration
-export { autoRegisterComponents, autoRegisterComponent } from './core/auto-register-components';
 export { findUserfaceFolder } from './core/find-userface-folder';
 export { findComponentsRecursively, autoRegisterAllComponents } from './core/find-components-recursively';
 
