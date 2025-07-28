@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { ComponentSchema, Type } from './types';
+import { ComponentSchema } from './schema';
+import { Type } from './types';
 
 // Расширяем Reflect для Angular метаданных
 declare global {

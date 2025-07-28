@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { createContext, useState, useEffect, useContext, useMemo } from 'react';
-import { RenderPlatform, UserFace, Renderer, ContextProvider, ComponentNotFoundError } from './types';
+import { UserFace } from './types';
+import { RenderPlatform, Renderer, ContextProvider } from './api';
+import { ComponentNotFoundError } from './errors';
 import { unifiedRegistry } from './registry';
 
 // React рендерер

@@ -1,4 +1,6 @@
-import { RenderPlatform, UserFace, Renderer, ComponentNotFoundError } from './types';
+import { UserFace } from './types';
+import { RenderPlatform, Renderer } from './api';
+import { ComponentNotFoundError } from './errors';
 import { unifiedRegistry } from './registry';
 
 // Vue рендерер

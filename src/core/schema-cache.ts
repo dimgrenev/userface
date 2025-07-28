@@ -1,4 +1,4 @@
-import { ComponentSchema } from './types';
+import { ComponentSchema } from './schema';
 
 export interface SchemaCache {
   components: Record<string, ComponentSchema>;

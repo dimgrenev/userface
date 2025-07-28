@@ -31,20 +31,32 @@ export { renderVanilla, RenderVanilla } from './core/render-vanilla';
 // Type exports
 export type {
   UserFace,
+  Platform,
+  Type
+} from './core/types';
+
+// Schema exports
+export type {
   ComponentSchema,
   PropDefinition,
   EventDefinition,
-  ComponentRegistration,
+  ComponentRegistration
+} from './core/schema';
+
+// API exports
+export type {
   RenderPlatform,
   UserEngine,
-  Platform,
-  Type,
+  ContextProvider
+} from './core/api';
+
+// Error exports
+export {
   UserFaceError,
   ComponentNotFoundError,
   ValidationError,
-  RenderError,
-  ContextProvider
-} from './core/types';
+  RenderError
+} from './core/errors';
 
 // Utility functions
 export { validateUserFace } from './core/types';

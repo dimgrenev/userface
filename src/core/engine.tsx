@@ -1,4 +1,6 @@
-import { RenderPlatform, UserFace, ComponentRegistration, ComponentSchema, Platform, UserEngine } from './types';
+import { UserFace, Platform } from './types';
+import { ComponentRegistration, ComponentSchema } from './schema';
+import { RenderPlatform, UserEngine } from './api';
 import { unifiedRegistry } from './registry';
 import { logger } from './logger';
 

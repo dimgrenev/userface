@@ -1,5 +1,5 @@
 // import * as React from 'react';
-import { ComponentSchema, ComponentRegistration } from './types';
+import { ComponentSchema, ComponentRegistration } from './schema';
 import { Analyzer } from './analyzer';
 import { logger } from './logger';
 import { SchemaCacheManager } from './schema-cache';
