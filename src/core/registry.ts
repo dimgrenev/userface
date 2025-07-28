@@ -15,22 +15,17 @@ export class Registry {
   // Кэширование компонентов
   private componentCache = new Map<string, any>();
   
-  // Статистика
+  // Базовая статистика
   private stats = {
     totalComponents: 0,
     totalSchemas: 0,
-    cacheHits: 0,
-    cacheMisses: 0,
-    analysisCount: 0,
-    errors: 0,
-    totalAnalysisTime: 0 // Добавляем для хранения общего времени анализа
+    errors: 0
   };
 
   // === РЕГИСТРАЦИЯ КОМПОНЕНТОВ ===
   
   // Регистрация с автоматическим анализом
   registerComponent(name: string, component: any): ComponentSchema {
-    const startTime = performance.now();
     
     try {
       // Проверяем кэш схем
@@ -42,10 +37,6 @@ export class Registry {
         if (schema) {
           this.schemaCache.setSchema(name, schema);
         }
-        this.stats.analysisCount++;
-        this.stats.cacheMisses++;
-      } else {
-        this.stats.cacheHits++;
       }
       
       // Сохраняем компонент
@@ -55,13 +46,9 @@ export class Registry {
       this.stats.totalComponents = this.components.size;
       this.stats.totalSchemas = this.schemaCache.getStats().count;
       
-      const analysisTime = performance.now() - startTime;
-      this.stats.totalAnalysisTime += analysisTime;
-      
       logger.info(`Registered component "${name}" with auto-analysis`, 'Registry', { 
         name, 
-        schema, 
-        analysisTime: `${analysisTime.toFixed(2)}ms` 
+        schema
       });
       
       return schema || {
@@ -75,12 +62,9 @@ export class Registry {
       
     } catch (error) {
       this.stats.errors++;
-      const analysisTime = performance.now() - startTime;
-      this.stats.totalAnalysisTime += analysisTime;
       
       logger.error(`Failed to register component "${name}"`, 'Registry', error as Error, { 
-        name,
-        analysisTime: `${analysisTime.toFixed(2)}ms`
+        name
       });
       
       // Fallback - базовая схема
@@ -271,9 +255,7 @@ export class Registry {
   getStats() {
     return {
       ...this.stats,
-      cacheHitRate: this.stats.cacheHits / (this.stats.cacheHits + this.stats.cacheMisses) || 0,
-      averageAnalysisTime: this.stats.totalAnalysisTime / this.stats.analysisCount || 0,
-      errorRate: this.stats.errors / this.stats.analysisCount || 0
+      errorRate: this.stats.errors / this.stats.totalComponents || 0
     };
   }
 
@@ -282,11 +264,7 @@ export class Registry {
     this.stats = {
       totalComponents: this.components.size,
       totalSchemas: this.schemaCache.getStats().count,
-      cacheHits: 0,
-      cacheMisses: 0,
-      analysisCount: 0,
-      errors: 0,
-      totalAnalysisTime: 0 // Сбрасываем общее время анализа
+      errors: 0
     };
   }
 

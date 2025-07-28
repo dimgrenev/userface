@@ -1,6 +1,13 @@
 import * as React from 'react';
 import { ComponentSchema, Type } from './types';
 
+// Расширяем Reflect для Angular метаданных
+declare global {
+  interface Reflect {
+    getMetadata(metadataKey: string, target: any): any;
+  }
+}
+
 export class Analyzer {
   // Анализ React компонента
   static analyzeReactComponent(component: any, name: string): ComponentSchema {
@@ -37,23 +44,14 @@ export class Analyzer {
       });
     }
     
-    // Анализируем TypeScript типы если есть
-    if (component.displayName || component.name) {
-      // Пытаемся извлечь типы из TypeScript
-      try {
-        const componentType = component as React.ComponentType<any>;
-        // Это базовая реализация, в реальности нужен более сложный анализ
-        if (!props.length) {
-          props.push({
-            name: 'children',
-            type: 'any',
-            required: false,
-            description: 'React children prop'
-          });
-        }
-      } catch (error) {
-        // Игнорируем ошибки анализа TypeScript
-      }
+    // Добавляем children если нет других пропов
+    if (!props.length) {
+      props.push({
+        name: 'children',
+        type: 'any',
+        required: false,
+        description: 'React children prop'
+      });
     }
     
     return {
@@ -143,18 +141,23 @@ export class Analyzer {
   static analyzeAngularComponent(component: any, name: string): ComponentSchema {
     const props: any[] = [];
     
-    // Анализируем Input декораторы
+    // Анализируем Input декораторы (если доступно)
     if (component.prototype && component.prototype.constructor) {
-      const metadata = Reflect.getMetadata('design:paramtypes', component.prototype.constructor);
-      if (metadata) {
-        metadata.forEach((param: any, index: number) => {
-          props.push({
-            name: `param${index}`,
-            type: this.mapAngularType(param),
-            required: false,
-            description: `Angular input parameter ${index}`
+      try {
+        // Пытаемся получить метаданные Angular (может не работать в некоторых средах)
+        const metadata = (Reflect as any).getMetadata?.('design:paramtypes', component.prototype.constructor);
+        if (metadata) {
+          metadata.forEach((param: any, index: number) => {
+            props.push({
+              name: `param${index}`,
+              type: this.mapAngularType(param),
+              required: false,
+              description: `Angular input parameter ${index}`
+            });
           });
-        });
+        }
+      } catch (error) {
+        // Игнорируем ошибки метаданных
       }
     }
     
@@ -240,8 +243,8 @@ export class Analyzer {
       const paramMatch = functionString.match(/\(([^)]*)\)/);
       
       if (paramMatch && paramMatch[1]) {
-        const params = paramMatch[1].split(',').map(p => p.trim()).filter(p => p);
-        params.forEach(param => {
+        const params = paramMatch[1].split(',').map((p: string) => p.trim()).filter((p: string) => p);
+        params.forEach((param: string) => {
           // Убираем значения по умолчанию
           const paramName = param.split('=')[0].trim();
           props.push({
