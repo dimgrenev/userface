@@ -1,11 +1,17 @@
 import { ComponentSchema, ComponentRegistration } from './schema';
+import { UserFace } from './types';
+import { UserEngine } from './api';
 import { logger } from './logger';
 import { componentAnalyzer } from './analyzer';
 import { AdapterManager } from './adapter-manager';
 import { SystemInitializer } from './initializer';
 import { SystemMonitor } from './monitor';
 import { ComponentScanner } from './scanner';
-import { UserEngine } from './api';
+import { validationEngine } from './validation';
+import { errorRecovery } from './error-recovery';
+import { dataLayer } from './data-layer';
+import { initializePluginSystem } from './plugin-system';
+import { testingInfrastructure } from '../testing-infrastructure';
 
 // Главный класс Registry - ядро системы
 export class Registry implements UserEngine {
@@ -23,12 +29,22 @@ export class Registry implements UserEngine {
   private initializer: SystemInitializer;
   private monitor: SystemMonitor;
   private scanner: ComponentScanner;
+  private validationEngine: typeof validationEngine;
+  private errorRecovery: typeof errorRecovery;
+  private dataLayer: typeof dataLayer;
+  private pluginSystem: any;
+  private testingInfrastructure: typeof testingInfrastructure;
 
   constructor() {
     this.adapterManager = new AdapterManager();
     this.initializer = new SystemInitializer();
     this.monitor = new SystemMonitor();
     this.scanner = new ComponentScanner();
+    this.validationEngine = validationEngine;
+    this.errorRecovery = errorRecovery;
+    this.dataLayer = dataLayer;
+    this.pluginSystem = initializePluginSystem(this);
+    this.testingInfrastructure = testingInfrastructure;
     logger.info('Registry initialized', 'Registry');
   }
 
@@ -307,6 +323,97 @@ export class Registry implements UserEngine {
       children: false,
       description: `Fallback schema for ${name}`
     };
+  }
+
+  // === ПЛАГИН СИСТЕМА ===
+  
+  async registerPlugin(plugin: any, config?: any): Promise<void> {
+    return this.pluginSystem.registerPlugin(plugin, config);
+  }
+
+  async uninstallPlugin(pluginId: string): Promise<void> {
+    return this.pluginSystem.uninstallPlugin(pluginId);
+  }
+
+  async enablePlugin(pluginId: string): Promise<void> {
+    return this.pluginSystem.enablePlugin(pluginId);
+  }
+
+  async disablePlugin(pluginId: string): Promise<void> {
+    return this.pluginSystem.disablePlugin(pluginId);
+  }
+
+  getPlugin(pluginId: string): any {
+    return this.pluginSystem.getPlugin(pluginId);
+  }
+
+  getAllPlugins(): any[] {
+    return this.pluginSystem.getPluginsByType('custom');
+  }
+
+  getActivePlugins(): any[] {
+    return this.pluginSystem.getPluginsByType('custom').filter((p: any) => p.status === 'enabled');
+  }
+
+  // === ТЕСТИРОВАНИЕ ===
+  
+  addTestSuite(suite: any): void {
+    this.testingInfrastructure.addTestSuite(suite);
+  }
+
+  async runAllTests(): Promise<any[]> {
+    return this.testingInfrastructure.runAllTests();
+  }
+
+  getTestResults(): any[] {
+    return this.testingInfrastructure.getTestResults();
+  }
+
+  createMockComponent(name: string, schema: any, render: (props: any) => any): any {
+    this.testingInfrastructure.mockComponent(name, schema, render);
+    return { name, schema, render };
+  }
+
+  generateTestData(schema: any): UserFace {
+    return this.testingInfrastructure.generateRandomUserFace(schema);
+  }
+
+  // === DATA LAYER ===
+  
+  registerDataSource(path: string, config: any): void {
+    this.dataLayer.registerDataSource(path, config);
+  }
+
+  async getData(path: string, options?: any): Promise<any> {
+    return this.dataLayer.getData(path, options);
+  }
+
+  subscribeToData(path: string, callback: (data: any, state: any) => void): any {
+    return this.dataLayer.subscribe(path, callback);
+  }
+
+  getDataState(path: string): any {
+    return this.dataLayer.getState(path);
+  }
+
+  clearAllData(): void {
+    this.dataLayer.clearAllData();
+  }
+
+  getDataStats(): any {
+    return this.dataLayer.getStats();
+  }
+
+  async renderWithData(spec: UserFace, adapterId: string): Promise<any> {
+    // Обрабатываем data свойства в UserFace
+    if (spec.data) {
+      for (const [key, dataConfig] of Object.entries(spec.data)) {
+        const data = await this.dataLayer.getData(dataConfig.source, dataConfig.config);
+        spec[key] = data;
+      }
+    }
+    
+    return this.renderWithAdapter(spec, adapterId);
   }
 }
 

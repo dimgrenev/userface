@@ -1,24 +1,25 @@
 {
   "name": "userface",
   "version": "1.0.7",
-  "description": "Universal UI engine with platform adapters",
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
-  "types": "dist/index.d.ts",
-  "bin": {
-    "userface": "scripts/create-userface-folder.js"
-  },
+  "description": "Universal Data-Driven UI Engine with live data, validation, and multi-platform support",
+  "main": "build/index.js",
+  "module": "build/index.esm.js",
+  "types": "build/index.d.ts",
+      "bin": {
+      "userface": "delete/scripts/create-userface-folder.js"
+    },
   "files": [
-    "dist",
-    "scripts"
+    "build",
+    "README.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview",
-    "generate-specs": "tsx scripts/generate-specs.ts",
-    "generate-types": "tsx scripts/generate-types.ts",
-    "init": "node scripts/create-userface-folder.js"
+    "generate-specs": "tsx delete/scripts/generate-specs.ts",
+    "generate-types": "tsx delete/scripts/generate-types.ts",
+    "init": "node delete/scripts/create-userface-folder.js"
   },
   "keywords": [
     "ui",
@@ -26,7 +27,17 @@
     "components",
     "universal",
     "adapter",
-    "platform"
+    "platform",
+    "data-driven",
+    "live-data",
+    "validation",
+    "react",
+    "vue",
+    "angular",
+    "svelte",
+    "typescript",
+    "plugin-system",
+    "error-recovery"
   ],
   "author": "Dima Grenev",
   "license": "MIT",

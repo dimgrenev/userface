@@ -31,28 +31,34 @@ export type Type = TypeBase | TypePlatform | TypeUI | TypeFace;
 
 // Универсальный контейнер для всех компонентов
 export interface UserFace {
-  component: string;  // Имя компонента для рендеринга
-  id?: string;        // Уникальный идентификатор
-  children?: any;     // Дочерние элементы
-  
-  // Метаданные
-  meta?: {
-    className?: string;
-    visible?: boolean;
-    style?: Record<string, any>;
-    theme?: string;
-    responsive?: Record<string, any>;
-    accessibility?: Record<string, any>;
+    component: string;
+    id?: string;
+    children?: any;
+    meta?: {
+        className?: string;
+        visible?: boolean;
+        style?: Record<string, any>;
+        theme?: string;
+        responsive?: Record<string, any>;
+        accessibility?: Record<string, any>;
+        [key: string]: any;
+    };
+    events?: {
+        [key: string]: (...args: any[]) => void;
+    };
+    data?: {
+        [key: string]: {
+            source: string;
+            config?: {
+                cache?: boolean;
+                polling?: number;
+                realtime?: boolean;
+                transform?: (data: any) => any;
+                [key: string]: any;
+            };
+        };
+    };
     [key: string]: any;
-  };
-  
-  // События
-  events?: {
-    [key: string]: (...args: any[]) => void;
-  };
-  
-  // Любые пропы компонента - валидация через ComponentSchema
-  [key: string]: any;
 }
 
 // Валидация

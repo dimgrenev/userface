@@ -12,8 +12,9 @@ export default defineConfig({
     }),
   ],
   build: {
+    outDir: 'build',
     lib: {
-      entry: 'src/index.ts',
+      entry: 'index.ts',
       name: 'UserFace',
       formats: ['es', 'cjs'],
       fileName: (format) => `index.${format === 'es' ? 'esm.js' : 'js'}`,
