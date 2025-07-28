@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ComponentSchema, PropType } from './types';
+import { ComponentSchema, TypeProp } from './types';
 
 export class Analyzer {
   // Анализ React компонента
@@ -41,6 +41,7 @@ export class Analyzer {
     if (component.displayName || component.name) {
       // Пытаемся извлечь типы из TypeScript
       try {
+        const componentType = component as React.ComponentType<any>;
         // Это базовая реализация, в реальности нужен более сложный анализ
         if (!props.length) {
           props.push({
@@ -84,7 +85,7 @@ export class Analyzer {
     if (component.props) {
       Object.keys(component.props).forEach(propName => {
         const prop = component.props[propName];
-        let propType: PropType = 'text';
+        let propType: TypeProp = 'text';
         let required = false;
         let defaultValue: any = undefined;
         
@@ -144,20 +145,16 @@ export class Analyzer {
     
     // Анализируем Input декораторы
     if (component.prototype && component.prototype.constructor) {
-      try {
-        const metadata = (Reflect as any).getMetadata('design:paramtypes', component.prototype.constructor);
-        if (metadata) {
-          metadata.forEach((param: any, index: number) => {
-            props.push({
-              name: `param${index}`,
-              type: this.mapAngularType(param),
-              required: false,
-              description: `Angular input parameter ${index}`
-            });
+      const metadata = Reflect.getMetadata('design:paramtypes', component.prototype.constructor);
+      if (metadata) {
+        metadata.forEach((param: any, index: number) => {
+          props.push({
+            name: `param${index}`,
+            type: this.mapAngularType(param),
+            required: false,
+            description: `Angular input parameter ${index}`
           });
-        }
-      } catch (error) {
-        // Игнорируем ошибки метаданных
+        });
       }
     }
     
@@ -243,8 +240,8 @@ export class Analyzer {
       const paramMatch = functionString.match(/\(([^)]*)\)/);
       
       if (paramMatch && paramMatch[1]) {
-        const params = paramMatch[1].split(',').map((p: string) => p.trim()).filter((p: string) => p);
-        params.forEach((param: string) => {
+        const params = paramMatch[1].split(',').map(p => p.trim()).filter(p => p);
+        params.forEach(param => {
           // Убираем значения по умолчанию
           const paramName = param.split('=')[0].trim();
           props.push({
@@ -291,7 +288,7 @@ export class Analyzer {
   }
   
   // Маппинг React prop типов
-  private static mapReactPropType(propType: any): PropType {
+  private static mapReactPropType(propType: any): TypeProp {
     if (!propType) return 'text';
     
     const typeName = propType.name || propType.constructor.name;
@@ -325,7 +322,7 @@ export class Analyzer {
   }
   
   // Маппинг Vue prop типов
-  private static mapVuePropType(propType: any): PropType {
+  private static mapVuePropType(propType: any): TypeProp {
     if (!propType) return 'text';
     
     if (Array.isArray(propType)) {
@@ -353,7 +350,7 @@ export class Analyzer {
   }
   
   // Маппинг Angular типов
-  private static mapAngularType(type: any): PropType {
+  private static mapAngularType(type: any): TypeProp {
     if (!type) return 'text';
     
     const typeName = type.name || type.constructor.name;
@@ -377,7 +374,7 @@ export class Analyzer {
   }
   
   // Маппинг Svelte prop типов
-  private static mapSveltePropType(prop: any): PropType {
+  private static mapSveltePropType(prop: any): TypeProp {
     if (!prop) return 'text';
     
     if (Array.isArray(prop)) {
@@ -403,7 +400,7 @@ export class Analyzer {
   }
   
   // Маппинг Vanilla JS типов
-  private static mapVanillaType(typeName: string): PropType {
+  private static mapVanillaType(typeName: string): TypeProp {
     switch (typeName) {
       case 'string':
         return 'text';
