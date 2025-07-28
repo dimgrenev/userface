@@ -219,14 +219,8 @@ export class Registry implements UserEngine {
       const result = this.findUserfaceFolder();
       
       if (result.found) {
-        const { autoRegisterAllComponents } = require('./find-components-recursively');
-        const success = autoRegisterAllComponents(result.path!, this);
-        
-        if (success) {
-          logger.info('Components auto-registered', 'Registry');
-        } else {
-          logger.info('No components found', 'Registry');
-        }
+        logger.info('Userface folder found, auto-registration skipped for now', 'Registry');
+        // TODO: Implement auto-registration without external dependency
       } else {
         logger.info('No userface folder found', 'Registry');
       }
