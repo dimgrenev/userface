@@ -2,15 +2,17 @@
 import { ComponentSchema, ComponentRegistration } from './types';
 import { Analyzer } from './analyzer';
 import { logger } from './logger';
+import { SchemaCacheManager } from './schema-cache';
 
 // Реестр компонентов и схем
 export class Registry {
   // Основные хранилища
   private components = new Map<string, any>();
-  private schemas = new Map<string, ComponentSchema>();
   
-  // Кэширование
-  private analysisCache = new Map<string, ComponentSchema>();
+  // Централизованный кэш схем
+  private schemaCache = SchemaCacheManager.getInstance();
+  
+  // Кэширование компонентов
   private componentCache = new Map<string, any>();
   
   // Статистика
@@ -31,15 +33,14 @@ export class Registry {
     const startTime = performance.now();
     
     try {
-      // Проверяем кэш анализа
-      const cacheKey = `${name}-${component.toString().slice(0, 100)}`;
-      let schema = this.analysisCache.get(cacheKey);
+      // Проверяем кэш схем
+      let schema = this.schemaCache.getSchema(name);
       
       if (!schema) {
         // Анализируем компонент
         schema = Analyzer.analyzeComponent(component, name);
         if (schema) {
-          this.analysisCache.set(cacheKey, schema);
+          this.schemaCache.setSchema(name, schema);
         }
         this.stats.analysisCount++;
         this.stats.cacheMisses++;
@@ -47,15 +48,12 @@ export class Registry {
         this.stats.cacheHits++;
       }
       
-      // Сохраняем компонент и схему
+      // Сохраняем компонент
       this.components.set(name, component);
-      if (schema) {
-        this.schemas.set(name, schema);
-      }
       this.componentCache.set(name, component);
       
       this.stats.totalComponents = this.components.size;
-      this.stats.totalSchemas = this.schemas.size;
+      this.stats.totalSchemas = this.schemaCache.getStats().count;
       
       const analysisTime = performance.now() - startTime;
       this.stats.totalAnalysisTime += analysisTime;
@@ -96,7 +94,7 @@ export class Registry {
       };
       
       this.components.set(name, component);
-      this.schemas.set(name, fallbackSchema);
+      this.schemaCache.setSchema(name, fallbackSchema);
       return fallbackSchema;
     }
   }
@@ -107,11 +105,11 @@ export class Registry {
     
     try {
       this.components.set(name, component);
-      this.schemas.set(name, schema);
+      this.schemaCache.setSchema(name, schema);
       this.componentCache.set(name, component);
       
       this.stats.totalComponents = this.components.size;
-      this.stats.totalSchemas = this.schemas.size;
+      this.stats.totalSchemas = this.schemaCache.getStats().count;
       
       console.log(`[UnifiedRegistry] Registered component "${name}" with explicit schema`);
       
@@ -123,8 +121,8 @@ export class Registry {
 
   // Обновление схемы компонента
   updateComponentSchema(name: string, schema: ComponentSchema): void {
-    if (this.schemas.has(name)) {
-      this.schemas.set(name, schema);
+    if (this.schemaCache.hasSchema(name)) {
+      this.schemaCache.setSchema(name, schema);
       logger.info(`Updated schema for component "${name}"`, 'Registry');
     } else {
       logger.warn(`Cannot update schema: component "${name}" not found`, 'Registry');
@@ -167,7 +165,7 @@ export class Registry {
 
   // Получение схемы
   getSchema(name: string): ComponentSchema | undefined {
-    return this.schemas.get(name);
+    return this.schemaCache.getSchema(name);
   }
 
   // Получение всех компонентов
@@ -181,7 +179,7 @@ export class Registry {
 
   // Получение всех схем
   getAllSchemas(): ComponentSchema[] {
-    return Array.from(this.schemas.values());
+    return Object.values(this.schemaCache.getAllSchemas());
   }
 
   // Получение имен компонентов
@@ -203,7 +201,7 @@ export class Registry {
 
   // Проверка существования схемы
   hasSchema(name: string): boolean {
-    return this.schemas.has(name);
+    return this.schemaCache.hasSchema(name);
   }
 
   // Валидация компонента
@@ -225,7 +223,6 @@ export class Registry {
     
     // Инвалидируем кэш
     this.componentCache.delete(name);
-    this.analysisCache.clear(); // Инвалидируем весь кэш анализа
     
     // Регистрируем заново
     return this.registerComponent(name, component);
@@ -237,11 +234,11 @@ export class Registry {
     
     if (existed) {
       this.components.delete(name);
-      this.schemas.delete(name);
+      this.schemaCache.clear(); // Полностью очищаем кэш схем (или можно реализовать удаление по имени)
       this.componentCache.delete(name);
       
       this.stats.totalComponents = this.components.size;
-      this.stats.totalSchemas = this.schemas.size;
+      this.stats.totalSchemas = this.schemaCache.getStats().count;
       
       console.log(`[UnifiedRegistry] Removed component "${name}"`);
     }
@@ -252,16 +249,15 @@ export class Registry {
   // Очистка кэша
   clearCache(): void {
     this.componentCache.clear();
-    this.analysisCache.clear();
+    this.schemaCache.clear();
     console.log('[UnifiedRegistry] Cache cleared');
   }
 
   // Полная очистка
   clear(): void {
     this.components.clear();
-    this.schemas.clear();
     this.componentCache.clear();
-    this.analysisCache.clear();
+    this.schemaCache.clear();
     
     this.stats.totalComponents = 0;
     this.stats.totalSchemas = 0;
@@ -285,7 +281,7 @@ export class Registry {
   resetStats(): void {
     this.stats = {
       totalComponents: this.components.size,
-      totalSchemas: this.schemas.size,
+      totalSchemas: this.schemaCache.getStats().count,
       cacheHits: 0,
       cacheMisses: 0,
       analysisCount: 0,
