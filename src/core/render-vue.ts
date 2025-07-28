@@ -14,7 +14,7 @@ class VueRenderer implements Renderer {
     };
   }
   
-  render(component: any, container: any): void {
+  render(component: any, _container: any): void {
     // В реальной реализации здесь будет рендеринг Vue компонента
     console.log('[VueRenderer] Rendering component:', component);
   }

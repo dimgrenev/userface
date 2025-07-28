@@ -14,7 +14,7 @@ class VanillaRenderer implements Renderer {
     };
   }
   
-  render(component: any, container: any): void {
+  render(component: any, _container: any): void {
     // В реальной реализации здесь будет рендеринг DOM элемента
     console.log('[VanillaRenderer] Rendering component:', component);
   }
