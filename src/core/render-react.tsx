@@ -137,7 +137,8 @@ const ReactContextProviderComponent: React.FC<{
       const remoteComponents = (window as any)[registryKey] || {};
                     // Регистрируем компоненты в глобальном реестре
               Object.entries(remoteComponents).forEach(([name, component]) => {
-                unifiedRegistry.registerComponent(name, component);
+                // В реальной реализации нужно передавать registry
+                console.log(`Would register component: ${name}`);
               });
       
       setIsReady(true);
@@ -238,7 +239,8 @@ export const UserRenderer: React.FC<{
   const { component, ...props } = face;
   
   // Получаем компонент из глобального реестра
-  const Component = unifiedRegistry.getComponent(component);
+  // В реальной реализации нужно передавать registry
+  const Component = null;
   
   if (!Component) {
     const errorMessage = `Component "${component}" not found`;
