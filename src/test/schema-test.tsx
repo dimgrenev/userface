@@ -82,9 +82,7 @@ const SchemaTest: React.FC = () => {
     });
   }, []);
 
-  const handleClick = () => {
-    alert('Button clicked!');
-  };
+  // Удаляем неиспользуемую функцию
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>

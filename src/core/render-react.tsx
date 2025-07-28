@@ -278,13 +278,7 @@ export class RenderReact implements RenderPlatform {
   
   renderer = new ReactRenderer();
   
-  // Компоненты, которые поддерживает этот адаптер (синхронизировано с types.ts)
-  private supportedComponents: string[] = [
-    'button', 'text', 'input', 'card', 'modal', 'form', 'list', 'table',
-    'tabs', 'accordion', 'slider', 'progress', 'checkbox', 'radio',
-    'select', 'textarea', 'image', 'link', 'container', 'layout',
-    'media', 'panel', 'side', 'footer', 'filter', 'feed', 'code', 'cardcart', 'article'
-  ];
+  // Движок не знает о конкретных компонентах - они определяются пользователем
   
   // Рендеринг компонента
   render(spec: UserFace): any {
@@ -313,7 +307,8 @@ export class RenderReact implements RenderPlatform {
   
   // Получение поддерживаемых компонентов
   getSupportedComponents(): string[] {
-    return this.supportedComponents;
+    // Возвращаем все зарегистрированные компоненты
+    return unifiedRegistry.getAllComponentNames();
   }
   
   // Валидация спецификации
@@ -323,21 +318,10 @@ export class RenderReact implements RenderPlatform {
       return false;
     }
     
-    // Проверяем поддержку компонента
-    if (!this.supportedComponents.includes(spec.component)) {
+    // Проверяем, что компонент зарегистрирован
+    const component = unifiedRegistry.getComponent(spec.component);
+    if (!component) {
       return false;
-    }
-    
-    // Проверяем схему компонента (если доступна)
-    const schema = unifiedRegistry.getSchema(spec.component);
-    if (schema) {
-      // Валидируем обязательные пропы
-      const requiredProps = schema.props.filter(p => p.required);
-      for (const prop of requiredProps) {
-        if (spec[prop.name] === undefined) {
-          return false;
-        }
-      }
     }
     
     return true;
@@ -347,10 +331,6 @@ export class RenderReact implements RenderPlatform {
   private getComponentFromRegistry(name: string): any | undefined {
     return unifiedRegistry.getComponent(name);
   }
-
-
-  
-
   
   // Приватные методы
   private adaptProps(props: any): any {
@@ -360,8 +340,7 @@ export class RenderReact implements RenderPlatform {
     delete adaptedProps.meta;
     delete adaptedProps.events;
     
-    // Валидируем универсальные типы
-    this.validateUniversalTypes(props);
+    // Движок не валидирует типы - это задача пользовательского кода
     
     // Обрабатываем события
     if (props.events) {
@@ -392,49 +371,7 @@ export class RenderReact implements RenderPlatform {
     return adaptedProps;
   }
   
-  // Валидация универсальных типов
-  private validateUniversalTypes(props: any): void {
-    const universalTypes = ['text', 'number', 'boolean', 'array', 'object', 'function', 'element', 'color', 'dimension', 'resource'];
-    
-    universalTypes.forEach(type => {
-      if (props[type] !== undefined) {
-        const value = props[type];
-        const isValid = this.validateType(value, type);
-        
-        if (!isValid) {
-          console.warn(`[RenderReact] Invalid type for "${type}":`, value);
-        }
-      }
-    });
-  }
-  
-  // Проверка типа значения
-  private validateType(value: any, type: string): boolean {
-    switch (type) {
-      case 'text':
-        return typeof value === 'string';
-      case 'number':
-        return typeof value === 'number' && !isNaN(value);
-      case 'boolean':
-        return typeof value === 'boolean';
-      case 'array':
-        return Array.isArray(value);
-      case 'object':
-        return typeof value === 'object' && value !== null && !Array.isArray(value);
-      case 'function':
-        return typeof value === 'function';
-      case 'element':
-        return value !== null && (typeof value === 'object' || typeof value === 'string');
-      case 'color':
-        return typeof value === 'string' && (value.startsWith('#') || value.startsWith('rgb') || value.startsWith('hsl'));
-      case 'dimension':
-        return typeof value === 'string' && /^\d+(\.\d+)?(px|em|rem|%|vh|vw)$/.test(value);
-      case 'resource':
-        return typeof value === 'string' && (value.startsWith('http') || value.startsWith('/'));
-      default:
-        return true;
-    }
-  }
+  // Движок не валидирует типы - это задача пользовательского кода
   
   private mapEventName(eventName: string): string | null {
     const eventMap: Record<string, string> = {

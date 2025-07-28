@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ComponentSchema, PropType, Platform } from './types';
+import { ComponentSchema, PropType } from './types';
 
 export class Analyzer {
   // Анализ React компонента
@@ -41,7 +41,6 @@ export class Analyzer {
     if (component.displayName || component.name) {
       // Пытаемся извлечь типы из TypeScript
       try {
-        const componentType = component as React.ComponentType<any>;
         // Это базовая реализация, в реальности нужен более сложный анализ
         if (!props.length) {
           props.push({
@@ -145,16 +144,20 @@ export class Analyzer {
     
     // Анализируем Input декораторы
     if (component.prototype && component.prototype.constructor) {
-      const metadata = Reflect.getMetadata('design:paramtypes', component.prototype.constructor);
-      if (metadata) {
-        metadata.forEach((param: any, index: number) => {
-          props.push({
-            name: `param${index}`,
-            type: this.mapAngularType(param),
-            required: false,
-            description: `Angular input parameter ${index}`
+      try {
+        const metadata = (Reflect as any).getMetadata('design:paramtypes', component.prototype.constructor);
+        if (metadata) {
+          metadata.forEach((param: any, index: number) => {
+            props.push({
+              name: `param${index}`,
+              type: this.mapAngularType(param),
+              required: false,
+              description: `Angular input parameter ${index}`
+            });
           });
-        });
+        }
+      } catch (error) {
+        // Игнорируем ошибки метаданных
       }
     }
     
@@ -240,8 +243,8 @@ export class Analyzer {
       const paramMatch = functionString.match(/\(([^)]*)\)/);
       
       if (paramMatch && paramMatch[1]) {
-        const params = paramMatch[1].split(',').map(p => p.trim()).filter(p => p);
-        params.forEach(param => {
+        const params = paramMatch[1].split(',').map((p: string) => p.trim()).filter((p: string) => p);
+        params.forEach((param: string) => {
           // Убираем значения по умолчанию
           const paramName = param.split('=')[0].trim();
           props.push({
@@ -351,7 +354,7 @@ export class Analyzer {
   
   // Маппинг Angular типов
   private static mapAngularType(type: any): PropType {
-    if (!type) return 'any';
+    if (!type) return 'text';
     
     const typeName = type.name || type.constructor.name;
     
@@ -369,13 +372,13 @@ export class Analyzer {
       case 'Function':
         return 'function';
       default:
-        return 'any';
+        return 'text';
     }
   }
   
   // Маппинг Svelte prop типов
   private static mapSveltePropType(prop: any): PropType {
-    if (!prop) return 'any';
+    if (!prop) return 'text';
     
     if (Array.isArray(prop)) {
       return 'array';
@@ -395,7 +398,7 @@ export class Analyzer {
       case 'function':
         return 'function';
       default:
-        return 'any';
+        return 'text';
     }
   }
   
@@ -413,7 +416,7 @@ export class Analyzer {
       case 'function':
         return 'function';
       default:
-        return 'any';
+        return 'text';
     }
   }
   

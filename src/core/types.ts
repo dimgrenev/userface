@@ -1,26 +1,7 @@
 export type Platform = string;
 
-// Базовые универсальные типы
-export type BaseType = 
-  | 'text'      // Любой текст
-  | 'number'    // Любое число
-  | 'boolean'   // Да/нет
-  | 'array'     // Список элементов
-  | 'object';   // Объект с ключами
-
-// Платформо-специфичные типы
-export type PlatformType = 
-  | 'function'  // Функция (только Web)
-  | 'element';  // Элемент (только Web)
-
-// UI-специфичные типы
-export type UIType = 
-  | 'color'     // Цвет (универсальный для UI)
-  | 'dimension' // Размеры (универсальный для UI)
-  | 'resource'; // Ресурсы (универсальный для UI)
-
-// Итоговый тип пропа
-export type PropType = BaseType | PlatformType | UIType;
+// Универсальный тип пропа - движок не знает о конкретных типах
+export type PropType = string;
 
 // Унифицированное описание пропа
 export interface PropDefinition {
@@ -70,27 +51,11 @@ export interface ComponentRegistration {
   adapterId?: string; // в каком адаптере регистрируется
 }
 
-// Базовый интерфейс для всех компонентов
+// Базовый интерфейс для всех компонентов - движок не знает о конкретных пропах
 export interface UserFace {
   component: string;
   id?: string;
   children?: any;
-  
-  // Универсальные базовые типы
-  text?: string;
-  number?: number;
-  boolean?: boolean;
-  array?: any[];
-  object?: Record<string, any>;
-  
-  // Платформо-специфичные типы (Web)
-  function?: (...args: any[]) => any;
-  element?: any;
-  
-  // UI-специфичные типы
-  color?: string;
-  dimension?: string;
-  resource?: string;
   
   // Метаданные
   meta?: {
@@ -108,261 +73,18 @@ export interface UserFace {
     [key: string]: (...args: any[]) => void;
   };
   
-  // Для обратной совместимости - любые другие пропы
+  // Любые другие пропы - движок их не валидирует
   [key: string]: any;
 }
 
-// Специфичные типы компонентов
-export interface ButtonSpec extends Omit<UserFace, 'component'> {
-  component: 'button';
-  text: string;
-  variant?: "primary" | "secondary" | "accent" | "danger" | "ghost" | "default" | "outlined" | "round";
-  fullWidth?: boolean;
-  align?: "left" | "center" | "right";
-  disabled?: boolean;
-  loading?: boolean;
-  icon?: any;
-  iconPosition?: "left" | "right";
-}
-
-export interface TextSpec extends Omit<UserFace, 'component'> {
-  component: 'text';
-  text: string;
-  variant?: "body-primary" | "body-secondary" | "heading-primary" | "heading-secondary" | "subheading-primary" | "subheading-secondary" | "caption-primary" | "caption-secondary" | "label-primary" | "label-secondary" | "success" | "warning" | "error";
-  weight?: "normal" | "medium" | "semibold" | "bold";
-  align?: "left" | "center" | "right" | "justify";
-  truncate?: boolean;
-  maxLines?: number;
-  as?: keyof JSX.IntrinsicElements;
-}
-
-export interface InputSpec extends Omit<UserFace, 'component'> {
-  component: 'input';
-  label?: string;
-  placeholder?: string;
-  value?: string;
-  type?: number;
-  required?: boolean;
-  disabled?: boolean;
-  readOnly?: boolean;
-  error?: string;
-  hint?: string;
-  maxLength?: number;
-  minLength?: number;
-  pattern?: string;
-  autocomplete?: string;
-  align?: "vertical" | "horizontal";
-}
-
-export interface CardSpec extends Omit<UserFace, 'component'> {
-  component: 'card';
-  variant?: "default" | "elevated";
-  media?: any;
-  header?: any;
-  content?: any;
-  footer?: any;
-}
-
-export interface ModalSpec extends Omit<UserFace, 'component'> {
-  component: 'modal';
-  isOpen: boolean;
-  title?: string;
-  variant?: "default" | "centered" | "side";
-}
-
-export interface FormSpec extends Omit<UserFace, 'component'> {
-  component: 'form';
-}
-
-export interface ListSpec extends Omit<UserFace, 'component'> {
-  component: 'list';
-  items: any[];
-  variant?: "default" | "bordered" | "striped";
-}
-
-export interface TableSpec extends Omit<UserFace, 'component'> {
-  component: 'table';
-  columns: any[];
-  data: any[];
-  variant?: "default" | "striped" | "bordered";
-}
-
-export interface TabsSpec extends Omit<UserFace, 'component'> {
-  component: 'tabs';
-  tabs: any[];
-  defaultActiveTab?: string;
-  variant?: "default" | "pills" | "underline";
-}
-
-export interface AccordionSpec extends Omit<UserFace, 'component'> {
-  component: 'accordion';
-  items: any[];
-  variant?: "plus" | "arrow";
-}
-
-export interface SliderSpec extends Omit<UserFace, 'component'> {
-  component: 'slider';
-  min?: number;
-  max?: number;
-  value?: number;
-  step?: number;
-  disabled?: boolean;
-}
-
-export interface ProgressSpec extends Omit<UserFace, 'component'> {
-  component: 'progress';
-  value: number;
-  max?: number;
-  variant?: "default" | "success" | "warning" | "error";
-  showLabel?: boolean;
-}
-
-export interface CheckboxSpec extends Omit<UserFace, 'component'> {
-  component: 'checkbox';
-  label?: string;
-  checked?: boolean;
-  disabled?: boolean;
-  required?: boolean;
-}
-
-export interface RadioSpec extends Omit<UserFace, 'component'> {
-  component: 'radio';
-  name: string;
-  options: any[];
-  value?: string;
-  disabled?: boolean;
-  required?: boolean;
-}
-
-export interface SelectSpec extends Omit<UserFace, 'component'> {
-  component: 'select';
-  label?: string;
-  options: any[];
-  value?: string;
-  values?: string;
-  multiple?: boolean;
-  disabled?: boolean;
-  placeholder?: string;
-}
-
-export interface TextareaSpec extends Omit<UserFace, 'component'> {
-  component: 'textarea';
-  label?: string;
-  placeholder?: string;
-  value?: string;
-  flow?: "vertical" | "horizontal";
-  autoResize?: boolean;
-}
-
-export interface ImageSpec extends Omit<UserFace, 'component'> {
-  component: 'image';
-  src: string;
-  alt: string;
-  width?: string;
-  height?: string;
-  variant?: "default" | "rounded" | "circle" | "thumbnail";
-  lazy?: boolean;
-}
-
-export interface LinkSpec extends Omit<UserFace, 'component'> {
-  component: 'link';
-  href: string;
-  variant?: "default" | "primary" | "secondary" | "underline";
-  target?: "_blank" | "_self" | "_parent" | "_top";
-  rel?: string;
-}
-
-export interface ContainerSpec extends Omit<UserFace, 'component'> {
-  component: 'container';
-  as?: keyof JSX.IntrinsicElements;
-}
-
-export interface LayoutSpec extends Omit<UserFace, 'component'> {
-  component: 'layout';
-  header?: any;
-  main: any;
-  side?: any;
-  footer?: any;
-  variant?: "default" | "sidebar" | "header-footer";
-}
-
-export interface MediaSpec extends Omit<UserFace, 'component'> {
-  component: 'media';
-  src: string;
-  type: "image" | "video" | "audio";
-  alt?: string;
-  width?: string;
-  height?: string;
-  controls?: boolean;
-  autoplay?: boolean;
-  loop?: boolean;
-  muted?: boolean;
-  poster?: string;
-}
-
-export interface PanelSpec extends Omit<UserFace, 'component'> {
-  component: 'panel';
-  title?: string;
-  variant?: "default" | "elevated" | "outlined";
-}
-
-export interface SideSpec extends Omit<UserFace, 'component'> {
-  component: 'side';
-  position?: "left" | "right";
-  width?: string;
-}
-
-export interface FooterSpec extends Omit<UserFace, 'component'> {
-  component: 'footer';
-  variant?: "default" | "minimal" | "full";
-}
-
-export interface FilterSpec extends Omit<UserFace, 'component'> {
-  component: 'filter';
-  fields: any[];
-  variant?: "default" | "compact" | "expanded";
-}
-
-export interface FeedSpec extends Omit<UserFace, 'component'> {
-  component: 'feed';
-  items: any[];
-  variant?: "default" | "timeline" | "card";
-}
-
-export interface CodeSpec extends Omit<UserFace, 'component'> {
-  component: 'code';
-  code: string;
-  language?: string;
-  theme?: "light" | "dark";
-  showLineNumbers?: boolean;
-}
-
-export interface CardcartSpec extends Omit<UserFace, 'component'> {
-  component: 'cardcart';
-  items: any[];
-  variant?: "default" | "compact" | "detailed";
-}
-
-export interface ArticleSpec extends Omit<UserFace, 'component'> {
-  component: 'article';
-  title?: string;
-  content: any;
-  author?: string;
-  date?: string;
-  variant?: "default" | "card" | "minimal";
-}
-
-// Объединенный тип для всех компонентов
-export type ComponentName = 'button' | 'text' | 'input' | 'card' | 'modal' | 'form' | 'list' | 'table' | 'tabs' | 'accordion' | 'slider' | 'progress' | 'checkbox' | 'radio' | 'select' | 'textarea' | 'image' | 'link' | 'container' | 'layout' | 'media' | 'panel' | 'side' | 'footer' | 'filter' | 'feed' | 'code' | 'cardcart' | 'article';
-
-export type ComponentSpec = ButtonSpec | TextSpec | InputSpec | CardSpec | ModalSpec | FormSpec | ListSpec | TableSpec | TabsSpec | AccordionSpec | SliderSpec | ProgressSpec | CheckboxSpec | RadioSpec | SelectSpec | TextareaSpec | ImageSpec | LinkSpec | ContainerSpec | LayoutSpec | MediaSpec | PanelSpec | SideSpec | FooterSpec | FilterSpec | FeedSpec | CodeSpec | CardcartSpec | ArticleSpec;
+// Движок не знает о конкретных компонентах - они определяются пользователем
 
 // Утилиты для работы с компонентами
-export function createSpec<T extends ComponentSpec>(spec: T): T {
+export function createSpec<T extends UserFace>(spec: T): T {
   return spec;
 }
 
-export function isComponentSpec(spec: any): spec is ComponentSpec {
+export function isComponentSpec(spec: any): spec is UserFace {
   return spec && typeof spec.component === 'string';
 }
 
