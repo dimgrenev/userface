@@ -19,13 +19,20 @@ export type TypeUI =
   | 'dimension' // Размеры (универсальный для UI)
   | 'resource'; // Ресурсы (универсальный для UI)
 
+// Типы для шрифтов
+export type TypeFace = 
+  | 'font-family'  // Семейство шрифтов
+  | 'font-size'    // Размер шрифта
+  | 'font-weight'  // Жирность шрифта
+  | 'font-style';  // Стиль шрифта
+
 // Итоговый тип пропа
-export type TypeProp = TypeBase | TypePlatform | TypeUI;
+export type Type = TypeBase | TypePlatform | TypeUI | TypeFace;
 
 // Унифицированное описание пропа
 export interface PropDefinition {
   name: string;
-  type: TypeProp;
+  type: Type;
   required: boolean;
   defaultValue?: any;
   description?: string;

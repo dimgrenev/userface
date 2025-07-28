@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ComponentSchema, TypeProp } from './types';
+import { ComponentSchema, Type } from './types';
 
 export class Analyzer {
   // Анализ React компонента
@@ -85,7 +85,7 @@ export class Analyzer {
     if (component.props) {
       Object.keys(component.props).forEach(propName => {
         const prop = component.props[propName];
-        let propType: TypeProp = 'text';
+        let propType: Type = 'text';
         let required = false;
         let defaultValue: any = undefined;
         
@@ -288,7 +288,7 @@ export class Analyzer {
   }
   
   // Маппинг React prop типов
-  private static mapReactPropType(propType: any): TypeProp {
+  private static mapReactPropType(propType: any): Type {
     if (!propType) return 'text';
     
     const typeName = propType.name || propType.constructor.name;
@@ -322,7 +322,7 @@ export class Analyzer {
   }
   
   // Маппинг Vue prop типов
-  private static mapVuePropType(propType: any): TypeProp {
+  private static mapVuePropType(propType: any): Type {
     if (!propType) return 'text';
     
     if (Array.isArray(propType)) {
@@ -350,7 +350,7 @@ export class Analyzer {
   }
   
   // Маппинг Angular типов
-  private static mapAngularType(type: any): TypeProp {
+  private static mapAngularType(type: any): Type {
     if (!type) return 'text';
     
     const typeName = type.name || type.constructor.name;
@@ -374,7 +374,7 @@ export class Analyzer {
   }
   
   // Маппинг Svelte prop типов
-  private static mapSveltePropType(prop: any): TypeProp {
+  private static mapSveltePropType(prop: any): Type {
     if (!prop) return 'text';
     
     if (Array.isArray(prop)) {
@@ -400,7 +400,7 @@ export class Analyzer {
   }
   
   // Маппинг Vanilla JS типов
-  private static mapVanillaType(typeName: string): TypeProp {
+  private static mapVanillaType(typeName: string): Type {
     switch (typeName) {
       case 'string':
         return 'text';

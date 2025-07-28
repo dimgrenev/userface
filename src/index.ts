@@ -38,7 +38,7 @@ export type {
   RenderPlatform,
   UserEngine,
   Platform,
-  TypeProp,
+  Type,
   UserFaceError,
   ComponentNotFoundError,
   ValidationError,
