@@ -63,4 +63,18 @@ export function validateUserFace(spec: any): spec is UserFace {
     typeof spec.component === 'string' &&
     spec.component.length > 0
   );
+}
+
+// === ТИПЫ ДЛЯ СКАНИРОВАНИЯ ===
+
+export interface FoundComponent {
+  path: string;
+  name: string;
+  module: any;
+}
+
+export interface ComponentSearchResult {
+  found: boolean;
+  components: FoundComponent[];
+  error?: string;
 } 

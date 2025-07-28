@@ -4,7 +4,6 @@ export { unifiedRegistry as engine, unifiedRegistry } from './core/registry';
 // Logging
 export { logger } from './core/logger';
 export type { LogLevel, LogEntry } from './core/logger';
-export { findComponentsRecursively, autoRegisterAllComponents } from './core/find-components-recursively';
 
 // React adapter exports
 export { renderReact, RenderReact } from './core/render-react';

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { ComponentSchema, ComponentRegistration } from './schema';
-import { Type } from './types';
+import { Type, FoundComponent } from './types';
 import { RenderPlatform, UserEngine } from './api';
 import { logger } from './logger';
 
@@ -222,7 +222,7 @@ export class Registry implements UserEngine {
         const components = this.scanUserfaceFolder(result.path!);
         
         if (components.length > 0) {
-          components.forEach((component: { path: string; name: string; module: any }) => {
+          components.forEach((component: FoundComponent) => {
             this.autoRegisterComponent(component.module, component.name);
           });
           logger.info(`Auto-registered ${components.length} components`, 'Registry');
@@ -371,8 +371,8 @@ export class Registry implements UserEngine {
 
   // === СКАНИРОВАНИЕ КОМПОНЕНТОВ ===
   
-  private scanUserfaceFolder(userfacePath: string): Array<{ path: string; name: string; module: any }> {
-    const foundComponents: Array<{ path: string; name: string; module: any }> = [];
+  private scanUserfaceFolder(userfacePath: string): FoundComponent[] {
+    const foundComponents: FoundComponent[] = [];
     
     try {
       if (typeof window !== 'undefined') return foundComponents;
@@ -396,7 +396,7 @@ export class Registry implements UserEngine {
     return foundComponents;
   }
 
-  private scanComponentsRecursively(dir: string, foundComponents: Array<{ path: string; name: string; module: any }>, depth: number = 0): void {
+  private scanComponentsRecursively(dir: string, foundComponents: FoundComponent[], depth: number = 0): void {
     if (typeof window !== 'undefined' || depth > 5) return;
     
     try {
@@ -438,7 +438,7 @@ export class Registry implements UserEngine {
     return hasComponentExt && !isComponentFile;
   }
 
-  private tryLoadComponent(filePath: string): { path: string; name: string; module: any } | null {
+  private tryLoadComponent(filePath: string): FoundComponent | null {
     try {
       if (typeof window !== 'undefined') return null;
 
