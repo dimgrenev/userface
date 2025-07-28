@@ -1,6 +1,6 @@
-import { ComponentSchema, ComponentRegistration } from '../schema';
-import { logger } from '../logger';
-import { componentAnalyzer } from '../analyzer';
+import { ComponentSchema, ComponentRegistration } from './schema';
+import { logger } from './logger';
+import { componentAnalyzer } from './analyzer';
 
 // Ядро регистрации компонентов
 export class ComponentRegistry {

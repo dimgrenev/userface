@@ -1,5 +1,5 @@
-import { RenderPlatform } from '../api';
-import { logger } from '../logger';
+import { RenderPlatform } from './api';
+import { logger } from './logger';
 
 // Менеджер адаптеров рендереров
 export class AdapterManager {

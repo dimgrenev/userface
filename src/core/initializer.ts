@@ -1,4 +1,4 @@
-import { logger } from '../logger';
+import { logger } from './logger';
 
 // Инициализатор системы
 export class SystemInitializer {

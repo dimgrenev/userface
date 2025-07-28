@@ -1,5 +1,5 @@
-import { ComponentSchema } from '../schema';
-import { logger } from '../logger';
+import { ComponentSchema } from './schema';
+import { logger } from './logger';
 
 // Кеш схем компонентов
 export class SchemaCache {

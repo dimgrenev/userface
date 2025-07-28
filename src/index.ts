@@ -55,7 +55,7 @@ export {
 export { validateUserFace } from './core/types';
 
 // Auto-register renderers and components
-import { unifiedRegistry } from './core/registry/index';
+import { unifiedRegistry } from './core/registry';
 import { renderReact } from './core/render-react';
 import { renderVue } from './core/render-vue';
 import { renderAngular } from './core/render-angular';

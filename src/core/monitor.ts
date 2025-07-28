@@ -1,4 +1,4 @@
-import { logger } from '../logger';
+import { logger } from './logger';
 
 // Мониторинг системы
 export class SystemMonitor {

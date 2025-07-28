@@ -1,11 +1,11 @@
-import { ComponentRegistry } from './registry';
+import { ComponentRegistry } from './component-registry';
 import { ComponentScanner } from './scanner';
-import { SchemaCache } from './cache';
-import { AdapterManager } from './adapters';
+import { SchemaCache } from './schema-cache';
+import { AdapterManager } from './adapter-manager';
 import { SystemInitializer } from './initializer';
 import { SystemMonitor } from './monitor';
-import { UserEngine } from '../api';
-import { logger } from '../logger';
+import { UserEngine } from './api';
+import { logger } from './logger';
 
 // Фасад для всех модулей registry
 export class Registry implements UserEngine {

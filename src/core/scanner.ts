@@ -1,5 +1,5 @@
-import { FoundComponent } from '../types';
-import { logger } from '../logger';
+import { FoundComponent } from './types';
+import { logger } from './logger';
 
 // Сканер компонентов
 export class ComponentScanner {
