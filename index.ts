@@ -1,5 +1,7 @@
 // Core exports
-export { unifiedRegistry as engine, unifiedRegistry } from './engine/registry';
+export { Engine } from './engine/engine';
+export { EngineFactory, engine } from './engine/engine-factory';
+export { unifiedRegistry } from './engine/registry'; // Legacy export for backward compatibility
 
 // Logging
 export { logger } from './engine/logger';

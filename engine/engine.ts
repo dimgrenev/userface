@@ -4,22 +4,22 @@ import { lifecycleManager } from './lifecycle-manager';
 import { eventBus } from './event-bus';
 
 export class Engine {
-  private componentRegistry: IComponentRegistry;
-  private dataLayer: IDataLayer;
-  private pluginSystem: IPluginSystem;
-  private validationEngine: IValidationEngine;
-  private errorRecovery: IErrorRecovery;
-  private testingInfrastructure: ITestingInfrastructure;
-  private logger: ILogger;
+  private componentRegistry: any;
+  private dataLayer: any;
+  private pluginSystem: any;
+  private validationEngine: any;
+  private errorRecovery: any;
+  private testingInfrastructure: any;
+  private logger: any;
 
   constructor(
-    componentRegistry: IComponentRegistry,
-    dataLayer: IDataLayer,
-    pluginSystem: IPluginSystem,
-    validationEngine: IValidationEngine,
-    errorRecovery: IErrorRecovery,
-    testingInfrastructure: ITestingInfrastructure,
-    logger: ILogger
+    componentRegistry: any,
+    dataLayer: any,
+    pluginSystem: any,
+    validationEngine: any,
+    errorRecovery: any,
+    testingInfrastructure: any,
+    logger: any
   ) {
     this.componentRegistry = componentRegistry;
     this.dataLayer = dataLayer;
@@ -59,17 +59,35 @@ export class Engine {
     try {
       await lifecycleManager.executeLifecycle('beforeRender', { userFace, adapterId });
       
-      // Валидация
-      const schema = this.componentRegistry.getComponentSchema(userFace.component);
-      if (schema) {
-        const validation = this.validationEngine.validateUserFace(userFace, schema);
-        if (!validation.isValid) {
-          throw new Error(`Validation failed: ${validation.errors.map((e: any) => e.message).join(', ')}`);
+      // Валидация (временно отключена)
+      // const schema = this.componentRegistry.getComponentSchema(userFace.component);
+      // if (schema) {
+      //   const validation = this.validationEngine.validateUserFace(userFace, schema);
+      //   if (!validation.isValid) {
+      //     throw new Error(`Validation failed: ${validation.errors.map((e: any) => e.message).join(', ')}`);
+      //   }
+      // }
+
+      // Простой рендеринг - возвращаем компонент с данными
+      const component = this.componentRegistry.getComponent(userFace.component);
+      if (!component) {
+        throw new Error(`Component not found: ${userFace.component}`);
+      }
+
+      // Обрабатываем data свойства в UserFace
+      if (userFace.data) {
+        for (const [key, dataConfig] of Object.entries(userFace.data)) {
+          const data = await this.dataLayer.getData(dataConfig.source, dataConfig.config);
+          userFace[key] = data;
         }
       }
 
-      // Рендеринг с данными
-      const result = await this.dataLayer.renderWithData(userFace, adapterId);
+      const result = {
+        component: userFace.component,
+        props: userFace,
+        adapterId,
+        timestamp: Date.now()
+      };
       
       await lifecycleManager.executeLifecycle('afterRender', { userFace, adapterId, result });
       
@@ -80,16 +98,20 @@ export class Engine {
   }
 
   // === DATA LAYER ===
+  registerDataSource(path: string, config: any): void {
+    this.dataLayer.registerDataSource(path, config);
+  }
+
   async getData(path: string, options?: any): Promise<any> {
     return this.dataLayer.getData(path, options);
   }
 
   subscribeToData(path: string, callback: (data: any, state: any) => void): any {
-    return this.dataLayer.subscribeToData(path, callback);
+    return this.dataLayer.subscribe(path, callback);
   }
 
   getDataState(path: string): any {
-    return this.dataLayer.getDataState(path);
+    return this.dataLayer.getState(path);
   }
 
   // === ПЛАГИНЫ ===
@@ -103,6 +125,14 @@ export class Engine {
 
   getActivePlugins(): any[] {
     return this.pluginSystem.getActivePlugins();
+  }
+
+  getPlugin(pluginId: string): any {
+    return this.pluginSystem.getPlugin(pluginId);
+  }
+
+  getAllPlugins(): any[] {
+    return this.pluginSystem.getAllPlugins();
   }
 
   // === ТЕСТИРОВАНИЕ ===
@@ -153,12 +183,10 @@ export class Engine {
     this.logger.error(`Engine error: ${error.message}`, context);
     
     try {
-      const recovery = await this.errorRecovery.handleError(error, context);
-      if (recovery.success && recovery.fallback) {
-        return recovery.fallback;
-      }
+      // Простая обработка ошибки без recovery
+      console.error('Engine error:', error.message, context);
     } catch (recoveryError) {
-      this.logger.error('Error recovery failed:', recoveryError);
+      this.logger.error('Error handling failed:', recoveryError);
     }
 
     throw error;

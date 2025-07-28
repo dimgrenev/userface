@@ -1,31 +1,33 @@
 import { Engine } from './engine';
 import { ComponentRegistry } from './component-registry';
-import { DataLayer } from './data-layer';
+import { dataLayer } from './data-layer';
 import { PluginSystem } from './plugin-system';
-import { ValidationEngine } from './validation';
-import { ErrorRecovery } from './error-recovery';
-import { TestingInfrastructure } from '../testing-infrastructure';
+import { validationEngine } from './validation';
+import { errorRecovery } from './error-recovery';
+import { testingInfrastructure } from '../testing-infrastructure';
 import { logger } from './logger';
 
 export class EngineFactory {
   static createEngine(): Engine {
     // Создаем все сервисы
     const componentRegistry = new ComponentRegistry();
-    const dataLayer = new DataLayer();
-    const pluginSystem = new PluginSystem(componentRegistry);
-    const validationEngine = new ValidationEngine();
-    const errorRecovery = new ErrorRecovery();
-    const testingInfrastructure = new TestingInfrastructure();
+    
+    // Используем существующие экземпляры
+    const dataLayerInstance = dataLayer;
+    const pluginSystemInstance = new PluginSystem(componentRegistry);
+    const validationEngineInstance = validationEngine;
+    const errorRecoveryInstance = errorRecovery;
+    const testingInfrastructureInstance = testingInfrastructure;
     const loggerInstance = logger;
 
     // Создаем Engine с зависимостями
     const engine = new Engine(
       componentRegistry,
-      dataLayer,
-      pluginSystem,
-      validationEngine,
-      errorRecovery,
-      testingInfrastructure,
+      dataLayerInstance,
+      pluginSystemInstance,
+      validationEngineInstance,
+      errorRecoveryInstance,
+      testingInfrastructureInstance,
       loggerInstance
     );
 
@@ -34,21 +36,21 @@ export class EngineFactory {
 
   static createEngineWithCustomServices(
     componentRegistry: ComponentRegistry,
-    dataLayer: DataLayer,
-    pluginSystem: PluginSystem,
-    validationEngine: ValidationEngine,
-    errorRecovery: ErrorRecovery,
-    testingInfrastructure: TestingInfrastructure,
-    logger: any
+    dataLayerInstance: any,
+    pluginSystemInstance: any,
+    validationEngineInstance: any,
+    errorRecoveryInstance: any,
+    testingInfrastructureInstance: any,
+    loggerInstance: any
   ): Engine {
     return new Engine(
       componentRegistry,
-      dataLayer,
-      pluginSystem,
-      validationEngine,
-      errorRecovery,
-      testingInfrastructure,
-      logger
+      dataLayerInstance,
+      pluginSystemInstance,
+      validationEngineInstance,
+      errorRecoveryInstance,
+      testingInfrastructureInstance,
+      loggerInstance
     );
   }
 }
