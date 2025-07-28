@@ -1,0 +1,110 @@
+import { ComponentSchema } from './types';
+import { IComponentRegistry } from './interfaces';
+
+export class ComponentRegistry implements IComponentRegistry {
+  private components: Map<string, any> = new Map();
+  private schemas: Map<string, ComponentSchema> = new Map();
+
+  registerComponent(name: string, component: any, schema?: ComponentSchema): void {
+    try {
+      // Если схема не предоставлена, создаем базовую
+      if (!schema) {
+        schema = {
+          name,
+          props: {},
+          events: {},
+          children: false
+        };
+      }
+
+      this.components.set(name, component);
+      this.schemas.set(name, schema);
+
+      console.log(`Component registered: ${name}`, { schema: schema.name });
+    } catch (error) {
+      console.error(`Failed to register component: ${name}`, error);
+      throw error;
+    }
+  }
+
+  getComponent(name: string): any {
+    const component = this.components.get(name);
+    if (!component) {
+      console.warn(`Component not found: ${name}`);
+      return null;
+    }
+    return component;
+  }
+
+  getComponentSchema(name: string): ComponentSchema | null {
+    const schema = this.schemas.get(name);
+    if (!schema) {
+      console.warn(`Schema not found for component: ${name}`);
+      return null;
+    }
+    return schema;
+  }
+
+  getAllComponents(): Map<string, any> {
+    return new Map(this.components);
+  }
+
+  getAllSchemas(): Map<string, ComponentSchema> {
+    return new Map(this.schemas);
+  }
+
+  removeComponent(name: string): void {
+    const component = this.components.get(name);
+    if (component) {
+      this.components.delete(name);
+      this.schemas.delete(name);
+      console.log(`Component removed: ${name}`);
+    } else {
+      console.warn(`Component not found for removal: ${name}`);
+    }
+  }
+
+  clear(): void {
+    const count = this.components.size;
+    this.components.clear();
+    this.schemas.clear();
+    console.log(`Registry cleared, removed ${count} components`);
+  }
+
+  // === ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ ===
+
+  hasComponent(name: string): boolean {
+    return this.components.has(name);
+  }
+
+  getComponentCount(): number {
+    return this.components.size;
+  }
+
+  getComponentNames(): string[] {
+    return Array.from(this.components.keys());
+  }
+
+  updateComponentSchema(name: string, schema: ComponentSchema): void {
+    if (this.components.has(name)) {
+      this.schemas.set(name, schema);
+      console.log(`Schema updated for component: ${name}`);
+    } else {
+      console.warn(`Cannot update schema for non-existent component: ${name}`);
+    }
+  }
+
+  validateComponent(name: string): boolean {
+    const component = this.components.get(name);
+    const schema = this.schemas.get(name);
+    
+    if (!component || !schema) {
+      return false;
+    }
+
+    // Базовая валидация компонента
+    return typeof component === 'function' || typeof component === 'object';
+  }
+}
+
+export const componentRegistry = new ComponentRegistry(); 

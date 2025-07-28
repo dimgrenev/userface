@@ -5,9 +5,9 @@
   "main": "build/index.js",
   "module": "build/index.esm.js",
   "types": "build/index.d.ts",
-      "bin": {
+  "bin": {
       "userface": "delete/scripts/create-userface-folder.js"
-    },
+  },
   "files": [
     "build",
     "README.md",

@@ -236,8 +236,8 @@ class Registry {
   registerDataSource(path: string, config: DataSourceConfig): void
   getData(path: string, options?: any): Promise<any>
   subscribeToData(path: string, callback: Function): DataSubscription
-  
-  // Статистика
+
+// Статистика
   getStats(): any
   getDataStats(): any
 }

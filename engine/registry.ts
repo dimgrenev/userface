@@ -404,6 +404,30 @@ export class Registry implements UserEngine {
     return this.dataLayer.getStats();
   }
 
+  // === РЕНДЕРИНГ ===
+  
+  async render(userFace: UserFace, adapterId: string): Promise<any> {
+    try {
+      // Валидация
+      const schema = this.getSchema(userFace.component);
+      if (schema) {
+        const validation = this.validationEngine.validateUserFace(userFace, schema);
+        if (!validation.isValid) {
+          throw new Error(`Validation failed: ${validation.errors.map((e: any) => e.message).join(', ')}`);
+        }
+      }
+
+      // Рендеринг с данными
+      const result = await this.renderWithData(userFace, adapterId);
+      
+      return result;
+    } catch (error) {
+      // Простая обработка ошибки
+      console.error('Render error:', error);
+      throw error;
+    }
+  }
+
   async renderWithData(spec: UserFace, adapterId: string): Promise<any> {
     // Обрабатываем data свойства в UserFace
     if (spec.data) {

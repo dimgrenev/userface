@@ -34,18 +34,18 @@ export interface UserFace {
     component: string;
     id?: string;
     children?: any;
-    meta?: {
-        className?: string;
-        visible?: boolean;
-        style?: Record<string, any>;
-        theme?: string;
-        responsive?: Record<string, any>;
-        accessibility?: Record<string, any>;
-        [key: string]: any;
-    };
-    events?: {
-        [key: string]: (...args: any[]) => void;
-    };
+  meta?: {
+    className?: string;
+    visible?: boolean;
+    style?: Record<string, any>;
+    theme?: string;
+    responsive?: Record<string, any>;
+    accessibility?: Record<string, any>;
+    [key: string]: any;
+  };
+  events?: {
+    [key: string]: (...args: any[]) => void;
+  };
     data?: {
         [key: string]: {
             source: string;
@@ -58,7 +58,7 @@ export interface UserFace {
             };
         };
     };
-    [key: string]: any;
+  [key: string]: any;
 }
 
 // Валидация
@@ -83,4 +83,33 @@ export interface ComponentSearchResult {
   found: boolean;
   components: FoundComponent[];
   error?: string;
+}
+
+// === SCHEMA ТИПЫ ===
+
+export interface ComponentSchema {
+  name: string;
+  props: Record<string, PropDefinition>;
+  events?: Record<string, EventDefinition>;
+  children?: boolean;
+  validation?: ValidationRule[];
+}
+
+export interface PropDefinition {
+  type: Type;
+  required?: boolean;
+  default?: any;
+  validation?: ValidationRule[];
+}
+
+export interface EventDefinition {
+  type: 'function';
+  required?: boolean;
+  parameters?: string[];
+}
+
+export interface ValidationRule {
+  type: 'required' | 'min' | 'max' | 'pattern' | 'custom';
+  value?: any;
+  message?: string;
 } 

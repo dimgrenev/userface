@@ -380,6 +380,35 @@ export class DataLayer {
             cache: this.cache.size
         };
     }
+
+    // === МЕТОДЫ ИНТЕРФЕЙСА IDataLayer ===
+
+    subscribeToData(path: string, callback: (data: any, state: any) => void): any {
+        return this.subscribe(path, callback);
+    }
+
+    getDataState(path: string): any {
+        return this.getState(path);
+    }
+
+    getDataStats(): any {
+        return this.getStats();
+    }
+
+    async renderWithData(spec: UserFace, adapterId: string): Promise<any> {
+        // Простая реализация - возвращаем компонент с данными
+        const component = spec.component;
+        const data = spec.data || {};
+        
+        // Здесь должна быть логика рендеринга с данными
+        // Пока возвращаем объект с компонентом и данными
+        return {
+            component,
+            data,
+            adapterId,
+            timestamp: Date.now()
+        };
+    }
 }
 
 export const dataLayer = new DataLayer(); 
