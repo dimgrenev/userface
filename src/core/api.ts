@@ -68,4 +68,11 @@ export interface ContextProvider {
   getData(): any;
   updateData(data: any): void;
   cleanup(): void;
+}
+
+// Интерфейс для доступа к Registry
+export interface ComponentRegistry {
+  getComponent(name: string): any | undefined;
+  getSchema(name: string): any | undefined;
+  getAllComponentNames(): string[];
 } 
