@@ -1,7 +1,26 @@
 export type Platform = string;
 
-// Универсальный тип пропа - движок не знает о конкретных типах
-export type PropType = string;
+// Базовые универсальные типы для валидации
+export type BaseType = 
+  | 'text'      // Любой текст
+  | 'number'    // Любое число
+  | 'boolean'   // Да/нет
+  | 'array'     // Список элементов
+  | 'object';   // Объект с ключами
+
+// Платформо-специфичные типы
+export type PlatformType = 
+  | 'function'  // Функция (только Web)
+  | 'element';  // Элемент (только Web)
+
+// UI-специфичные типы
+export type UIType = 
+  | 'color'     // Цвет (универсальный для UI)
+  | 'dimension' // Размеры (универсальный для UI)
+  | 'resource'; // Ресурсы (универсальный для UI)
+
+// Итоговый тип пропа
+export type PropType = BaseType | PlatformType | UIType;
 
 // Унифицированное описание пропа
 export interface PropDefinition {
@@ -51,11 +70,27 @@ export interface ComponentRegistration {
   adapterId?: string; // в каком адаптере регистрируется
 }
 
-// Базовый интерфейс для всех компонентов - движок не знает о конкретных пропах
+// Базовый интерфейс для всех компонентов
 export interface UserFace {
   component: string;
   id?: string;
   children?: any;
+  
+  // Универсальные базовые типы для валидации
+  text?: string;
+  number?: number;
+  boolean?: boolean;
+  array?: any[];
+  object?: Record<string, any>;
+  
+  // Платформо-специфичные типы (Web)
+  function?: (...args: any[]) => any;
+  element?: any;
+  
+  // UI-специфичные типы
+  color?: string;
+  dimension?: string;
+  resource?: string;
   
   // Метаданные
   meta?: {
@@ -73,7 +108,7 @@ export interface UserFace {
     [key: string]: (...args: any[]) => void;
   };
   
-  // Любые другие пропы - движок их не валидирует
+  // Любые другие пропы
   [key: string]: any;
 }
 

@@ -324,6 +324,18 @@ export class RenderReact implements RenderPlatform {
       return false;
     }
     
+    // Проверяем схему компонента (если доступна)
+    const schema = unifiedRegistry.getSchema(spec.component);
+    if (schema) {
+      // Валидируем обязательные пропы
+      const requiredProps = schema.props.filter(p => p.required);
+      for (const prop of requiredProps) {
+        if (spec[prop.name] === undefined) {
+          return false;
+        }
+      }
+    }
+    
     return true;
   }
   
@@ -340,7 +352,8 @@ export class RenderReact implements RenderPlatform {
     delete adaptedProps.meta;
     delete adaptedProps.events;
     
-    // Движок не валидирует типы - это задача пользовательского кода
+    // Валидируем универсальные типы
+    this.validateUniversalTypes(props);
     
     // Обрабатываем события
     if (props.events) {
@@ -371,7 +384,49 @@ export class RenderReact implements RenderPlatform {
     return adaptedProps;
   }
   
-  // Движок не валидирует типы - это задача пользовательского кода
+  // Валидация универсальных типов
+  private validateUniversalTypes(props: any): void {
+    const universalTypes = ['text', 'number', 'boolean', 'array', 'object', 'function', 'element', 'color', 'dimension', 'resource'];
+    
+    universalTypes.forEach(type => {
+      if (props[type] !== undefined) {
+        const value = props[type];
+        const isValid = this.validateType(value, type);
+        
+        if (!isValid) {
+          console.warn(`[RenderReact] Invalid type for "${type}":`, value);
+        }
+      }
+    });
+  }
+  
+  // Проверка типа значения
+  private validateType(value: any, type: string): boolean {
+    switch (type) {
+      case 'text':
+        return typeof value === 'string';
+      case 'number':
+        return typeof value === 'number' && !isNaN(value);
+      case 'boolean':
+        return typeof value === 'boolean';
+      case 'array':
+        return Array.isArray(value);
+      case 'object':
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
+      case 'function':
+        return typeof value === 'function';
+      case 'element':
+        return value !== null && (typeof value === 'object' || typeof value === 'string');
+      case 'color':
+        return typeof value === 'string' && (value.startsWith('#') || value.startsWith('rgb') || value.startsWith('hsl'));
+      case 'dimension':
+        return typeof value === 'string' && /^\d+(\.\d+)?(px|em|rem|%|vh|vw)$/.test(value);
+      case 'resource':
+        return typeof value === 'string' && (value.startsWith('http') || value.startsWith('/'));
+      default:
+        return true;
+    }
+  }
   
   private mapEventName(eventName: string): string | null {
     const eventMap: Record<string, string> = {
