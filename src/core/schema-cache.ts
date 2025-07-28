@@ -14,6 +14,9 @@ export class SchemaCacheManager {
     version: '1.0.0'
   };
 
+  // Синхронизация с реальными компонентами
+  private componentHashes = new Map<string, string>();
+
   static getInstance(): SchemaCacheManager {
     if (!SchemaCacheManager.instance) {
       SchemaCacheManager.instance = new SchemaCacheManager();
@@ -21,10 +24,14 @@ export class SchemaCacheManager {
     return SchemaCacheManager.instance;
   }
 
-  // Сохранить схему компонента
-  setSchema(componentName: string, schema: ComponentSchema): void {
+  // Сохранить схему компонента с хешем
+  setSchema(componentName: string, schema: ComponentSchema, componentHash?: string): void {
     this.cache.components[componentName] = schema;
     this.cache.lastUpdated = Date.now();
+    
+    if (componentHash) {
+      this.componentHashes.set(componentName, componentHash);
+    }
   }
 
   // Получить схему компонента
@@ -42,18 +49,38 @@ export class SchemaCacheManager {
     return componentName in this.cache.components;
   }
 
+  // Проверить актуальность схемы
+  isSchemaValid(componentName: string, currentHash: string): boolean {
+    const cachedHash = this.componentHashes.get(componentName);
+    return cachedHash === currentHash;
+  }
+
+  // Удалить схему компонента
+  removeSchema(componentName: string): void {
+    delete this.cache.components[componentName];
+    this.componentHashes.delete(componentName);
+    this.cache.lastUpdated = Date.now();
+  }
+
   // Очистить кэш
   clear(): void {
     this.cache.components = {};
+    this.componentHashes.clear();
     this.cache.lastUpdated = Date.now();
   }
 
   // Получить статистику кэша
-  getStats(): { count: number; lastUpdated: number; version: string } {
+  getStats(): { count: number; lastUpdated: number; version: string; validSchemas: number } {
     return {
       count: Object.keys(this.cache.components).length,
       lastUpdated: this.cache.lastUpdated,
-      version: this.cache.version
+      version: this.cache.version,
+      validSchemas: this.componentHashes.size
     };
+  }
+
+  // Экспорт кэша для отладки
+  exportCache(): SchemaCache {
+    return { ...this.cache };
   }
 } 

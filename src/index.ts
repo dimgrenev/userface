@@ -47,7 +47,7 @@ export type {
 } from './core/types';
 
 // Utility functions
-export { createSpec, isComponentSpec, validateUserFace } from './core/types';
+export { validateUserFace } from './core/types';
 
 // Auto-register renderers and components
 import './core/init';
