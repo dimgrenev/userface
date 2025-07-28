@@ -150,6 +150,20 @@ export class PluginSystem {
     getActivePlugins(): Plugin[] {
         return Array.from(this.plugins.values()).filter(p => {
             const status = this.statuses.get(p.id);
+            return status?.installed;
+        });
+    }
+
+    getInstalledPlugins(): Plugin[] {
+        return Array.from(this.plugins.values()).filter(p => {
+            const status = this.statuses.get(p.id);
+            return status?.installed;
+        });
+    }
+
+    getEnabledPlugins(): Plugin[] {
+        return Array.from(this.plugins.values()).filter(p => {
+            const status = this.statuses.get(p.id);
             return status?.enabled;
         });
     }

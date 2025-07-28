@@ -103,9 +103,68 @@ import { renderAngular } from './engine/render-angular';
 import { renderSvelte } from './engine/render-svelte';
 import { renderVanilla } from './engine/render-vanilla';
 
-// Регистрация адаптеров через Engine
-engine.registerAdapter(renderReact);
-engine.registerAdapter(renderVue);
-engine.registerAdapter(renderAngular);
-engine.registerAdapter(renderSvelte);
-engine.registerAdapter(renderVanilla);
+// Регистрация и установка адаптеров как плагины
+const adapterPlugins = [
+  {
+    id: 'react-adapter',
+    name: 'React Adapter',
+    version: '1.0.0',
+    type: 'adapter',
+    adapter: renderReact,
+    install: () => {
+      engine.registerAdapter(renderReact);
+    }
+  },
+  {
+    id: 'vue-adapter',
+    name: 'Vue Adapter', 
+    version: '1.0.0',
+    type: 'adapter',
+    adapter: renderVue,
+    install: () => {
+      engine.registerAdapter(renderVue);
+    }
+  },
+  {
+    id: 'angular-adapter',
+    name: 'Angular Adapter',
+    version: '1.0.0', 
+    type: 'adapter',
+    adapter: renderAngular,
+    install: () => {
+      engine.registerAdapter(renderAngular);
+    }
+  },
+  {
+    id: 'svelte-adapter',
+    name: 'Svelte Adapter',
+    version: '1.0.0',
+    type: 'adapter', 
+    adapter: renderSvelte,
+    install: () => {
+      engine.registerAdapter(renderSvelte);
+    }
+  },
+  {
+    id: 'vanilla-adapter',
+    name: 'Vanilla JS Adapter',
+    version: '1.0.0',
+    type: 'adapter',
+    adapter: renderVanilla,
+    install: () => {
+      engine.registerAdapter(renderVanilla);
+    }
+  }
+];
+
+// Функция для инициализации адаптеров
+async function initializeAdapters() {
+  for (const plugin of adapterPlugins) {
+    await engine.registerPlugin(plugin);
+    // Устанавливаем плагин сразу после регистрации
+    await engine.installPlugin(plugin.id);
+  }
+}
+
+// Инициализируем адаптеры
+initializeAdapters().catch(console.error);

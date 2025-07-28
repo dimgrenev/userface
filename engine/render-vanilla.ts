@@ -77,9 +77,14 @@ export class RenderVanilla implements RenderPlatform {
     if (!spec.component || typeof spec.component !== 'string') {
       return false;
     }
-    if (!this.supportedComponents.includes(spec.component)) {
+    
+    // Проверяем что компонент зарегистрирован в Engine
+    const component = engine.getComponent(spec.component);
+    if (!component) {
       return false;
     }
+    
+    // Проверяем обязательные пропсы из схемы
     const schema = engine.getComponentSchema(spec.component);
     if (schema) {
       const requiredProps = schema.props.filter(p => p.required);

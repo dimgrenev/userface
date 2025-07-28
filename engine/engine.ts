@@ -135,12 +135,24 @@ export class Engine {
     await this.pluginManager.registerPlugin(plugin, config);
   }
 
+  async installPlugin(pluginId: string): Promise<void> {
+    await this.pluginManager.installPlugin(pluginId);
+  }
+
   async uninstallPlugin(pluginId: string): Promise<void> {
     await this.pluginManager.uninstallPlugin(pluginId);
   }
 
   getActivePlugins(): any[] {
     return this.pluginManager.getActivePlugins();
+  }
+
+  getInstalledPlugins(): any[] {
+    return this.pluginManager.getInstalledPlugins();
+  }
+
+  getEnabledPlugins(): any[] {
+    return this.pluginManager.getEnabledPlugins();
   }
 
   getPlugin(pluginId: string): any {

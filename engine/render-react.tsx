@@ -4,6 +4,7 @@ import { Face } from './types';
 import { RenderPlatform, Renderer, ContextProvider } from './api';
 import { ComponentNotFoundError } from './errors';
 import { logger } from './logger';
+import { engine } from './engine-factory';
 
 // React рендерер
 class ReactRenderer implements Renderer {
@@ -302,9 +303,8 @@ export class RenderReact implements RenderPlatform {
   }
 
   private getComponentFromRegistry(name: string): any | undefined {
-    // Получаем компонент из глобального registry
-    const registry = (window as any).userRegistry || {};
-    return registry[name];
+    // Получаем компонент из Engine
+    return engine.getComponent(name);
   }
 
   private adaptProps(props: any): any {
