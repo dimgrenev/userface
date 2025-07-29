@@ -74,9 +74,7 @@ export type { Plugin, PluginType, PluginContext, PluginConfig, PluginStatus } fr
 export { testingInfrastructure, TestingInfrastructure } from './testing-infrastructure';
 export type { TestResult, TestSuite, TestCase, MockComponent, TestEnvironment } from './testing-infrastructure';
 
-// AST Analyzer exports
-export { astAnalyzer, ASTAnalyzer } from './engine/ast-analyzer';
-export type { ASTAnalysisResult } from './engine/ast-analyzer';
+
 
 // Data Layer exports
 export { dataLayer, DataLayer } from './engine/data-layer';
