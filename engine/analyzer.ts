@@ -1,27 +1,11 @@
 import { Schema } from './schema';
 import { Type } from './types';
-import { Project, SourceFile, Node, SyntaxKind, TypeReferenceNode, InterfaceDeclaration, PropertySignature, MethodSignature, FunctionDeclaration, VariableStatement, VariableDeclaration, ArrowFunction, CallExpression, Identifier, PropertyAccessExpression, ScriptTarget, ModuleKind, ModuleResolutionKind } from 'ts-morph';
-import { JsxEmit } from 'typescript';
 
 console.log('[AST-DEBUG] analyzer.ts loaded');
 
 export class ComponentAnalyzer {
-  private project: Project;
-
   constructor() {
     console.log('[AST-DEBUG] ComponentAnalyzer constructed');
-    this.project = new Project({
-      useInMemoryFileSystem: true,
-      compilerOptions: {
-        target: ScriptTarget.ES2020,
-        module: ModuleKind.ESNext,
-        moduleResolution: ModuleResolutionKind.NodeJs,
-        allowSyntheticDefaultImports: true,
-        esModuleInterop: true,
-        allowJs: true,
-        jsx: JsxEmit.ReactJSX
-      }
-    });
   }
 
   analyzeComponent(component: any, name: string): Schema {
@@ -54,25 +38,22 @@ export class ComponentAnalyzer {
     console.log('[AST-DEBUG] analyzeCodeString called', { name, codeLength: code.length });
     
     try {
-      // Создаем временный файл для анализа
-      const sourceFile = this.project.createSourceFile(`temp-${name}.tsx`, code);
-      
       const props: any[] = [];
       const events: any[] = [];
       let platform = 'universal';
       let children = false;
       
-      // Анализируем интерфейсы и типы
-      this.extractInterfaces(sourceFile, props, events);
+      // Анализируем интерфейсы и типы с помощью regex
+      this.extractInterfacesRegex(code, props, events);
       
       // Анализируем функции и компоненты
-      this.extractFunctions(sourceFile, props, events, name);
+      this.extractFunctionsRegex(code, props, events, name);
       
       // Определяем платформу
-      platform = this.detectPlatform(sourceFile, code);
+      platform = this.detectPlatformRegex(code);
       
       // Проверяем поддержку children
-      children = this.detectChildrenSupport(sourceFile, code);
+      children = this.detectChildrenSupportRegex(code);
       
       return {
         name,
@@ -130,16 +111,23 @@ export class ComponentAnalyzer {
     };
   }
 
-  private extractInterfaces(sourceFile: SourceFile, props: any[], events: any[]): void {
-    const interfaces = sourceFile.getInterfaces();
+  private extractInterfacesRegex(code: string, props: any[], events: any[]): void {
+    // Ищем интерфейсы
+    const interfaceRegex = /interface\s+(\w+)\s*\{([^}]+)\}/g;
+    let match;
     
-    interfaces.forEach(interfaceDecl => {
-      const properties = interfaceDecl.getProperties();
+    while ((match = interfaceRegex.exec(code)) !== null) {
+      const interfaceName = match[1];
+      const interfaceBody = match[2];
       
-      properties.forEach(prop => {
-        const propName = prop.getName();
-        const propType = this.mapTypeScriptType(prop.getType().getText());
-        const isRequired = !prop.hasQuestionToken();
+      // Ищем свойства в интерфейсе
+      const propertyRegex = /(\w+)\s*(\?)?\s*:\s*([^;]+);/g;
+      let propMatch;
+      
+      while ((propMatch = propertyRegex.exec(interfaceBody)) !== null) {
+        const propName = propMatch[1];
+        const isOptional = !!propMatch[2];
+        const propType = propMatch[3].trim();
         
         if (propName.startsWith('on')) {
           events.push({
@@ -150,26 +138,27 @@ export class ComponentAnalyzer {
         } else {
           props.push({
             name: propName,
-            type: propType,
-            required: isRequired,
+            type: this.mapTypeScriptType(propType),
+            required: !isOptional,
             description: `Interface prop: ${propName}`
           });
         }
-      });
-    });
+      }
+    }
   }
 
-  private extractFunctions(sourceFile: SourceFile, props: any[], events: any[], componentName: string): void {
-    const functions = sourceFile.getFunctions();
-    const variables = sourceFile.getVariableStatements();
+  private extractFunctionsRegex(code: string, props: any[], events: any[], componentName: string): void {
+    // Ищем функции с именем компонента
+    const functionRegex = new RegExp(`(?:function\\s+${componentName}|const\\s+${componentName}\\s*=\\s*\\(|export\\s+(?:function\\s+)?${componentName})\\s*\\(([^)]*)\\)`, 'g');
+    let match;
     
-    // Анализируем функции
-    functions.forEach(func => {
-      if (func.getName() === componentName) {
-        const parameters = func.getParameters();
-        parameters.forEach(param => {
-          const paramName = param.getName();
-          const paramType = this.mapTypeScriptType(param.getType().getText());
+    while ((match = functionRegex.exec(code)) !== null) {
+      const params = match[1];
+      if (params) {
+        const paramList = params.split(',').map(p => p.trim());
+        paramList.forEach(param => {
+          const paramName = param.split(':')[0].trim();
+          const paramType = param.split(':')[1]?.trim() || 'any';
           
           if (paramName.startsWith('on')) {
             events.push({
@@ -180,78 +169,28 @@ export class ComponentAnalyzer {
           } else {
             props.push({
               name: paramName,
-              type: paramType,
-              required: !param.hasQuestionToken(),
+              type: this.mapTypeScriptType(paramType),
+              required: !param.includes('?'),
               description: `Function prop: ${paramName}`
             });
           }
         });
       }
-    });
-    
-    // Анализируем переменные (arrow functions)
-    variables.forEach(variable => {
-      const declarations = variable.getDeclarations();
-      declarations.forEach(decl => {
-        const initializer = decl.getInitializer();
-        if (initializer && initializer.getKind() === SyntaxKind.ArrowFunction) {
-          const arrowFunc = initializer as ArrowFunction;
-          const parameters = arrowFunc.getParameters();
-          parameters.forEach(param => {
-            const paramName = param.getName();
-            const paramType = this.mapTypeScriptType(param.getType().getText());
-            
-            if (paramName.startsWith('on')) {
-              events.push({
-                name: paramName,
-                parameters: [],
-                description: `${paramName} event`
-              });
-            } else {
-              props.push({
-                name: paramName,
-                type: paramType,
-                required: !param.hasQuestionToken(),
-                description: `Arrow function prop: ${paramName}`
-              });
-            }
-          });
-        }
-      });
-    });
+    }
   }
 
-  private detectPlatform(sourceFile: SourceFile, code: string): string {
-    // Определяем платформу по импортам и коду
-    const imports = sourceFile.getImportDeclarations();
-    
-    for (const importDecl of imports) {
-      const moduleSpecifier = importDecl.getModuleSpecifierValue();
-      if (moduleSpecifier.includes('react')) {
-        return 'react';
-      }
-      if (moduleSpecifier.includes('vue')) {
-        return 'vue';
-      }
-      if (moduleSpecifier.includes('angular')) {
-        return 'angular';
-      }
-      if (moduleSpecifier.includes('svelte')) {
-        return 'svelte';
-      }
-    }
-    
-    // Определяем по паттернам в коде
-    if (code.includes('React.') || code.includes('useState') || code.includes('useEffect')) {
+  private detectPlatformRegex(code: string): string {
+    // Определяем платформу по паттернам в коде
+    if (code.includes('import React') || code.includes('from "react"') || code.includes('useState') || code.includes('useEffect')) {
       return 'react';
     }
-    if (code.includes('Vue.') || code.includes('defineComponent')) {
+    if (code.includes('import Vue') || code.includes('from "vue"') || code.includes('defineComponent')) {
       return 'vue';
     }
-    if (code.includes('@Component') || code.includes('@Input')) {
+    if (code.includes('@Component') || code.includes('@Input') || code.includes('from "@angular')) {
       return 'angular';
     }
-    if (code.includes('$:') || code.includes('{#if}')) {
+    if (code.includes('$:') || code.includes('{#if}') || code.includes('from "svelte')) {
       return 'svelte';
     }
     
@@ -273,23 +212,9 @@ export class ComponentAnalyzer {
     return 'universal';
   }
 
-  private detectChildrenSupport(sourceFile: SourceFile, code: string): boolean {
+  private detectChildrenSupportRegex(code: string): boolean {
     // Проверяем поддержку children
-    if (code.includes('children') || code.includes('{children}')) {
-      return true;
-    }
-    
-    const interfaces = sourceFile.getInterfaces();
-    for (const interfaceDecl of interfaces) {
-      const properties = interfaceDecl.getProperties();
-      for (const prop of properties) {
-        if (prop.getName() === 'children') {
-          return true;
-        }
-      }
-    }
-    
-    return false;
+    return code.includes('children') || code.includes('{children}') || code.includes('ReactNode');
   }
 
   private getFunctionParameters(func: Function): string[] {
