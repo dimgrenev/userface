@@ -6,27 +6,33 @@ export class ComponentAnalyzer {
   
   // Анализ компонента любой платформы
   analyzeComponent(component: any, name: string): Schema {
+    console.log('[AST-DEBUG] analyzeComponent:', { name, typeofComponent: typeof component, component });
     // Определяем платформу по типу компонента
     if (this.isReactComponent(component)) {
+      console.log('[AST-DEBUG] Detected React component', { name, platform: component.platform });
       return this.analyzeReactComponent(component, name);
     }
     
     // Vue компонент
     if (this.isVueComponent(component)) {
+      console.log('[AST-DEBUG] Detected Vue component', { name, platform: component.platform });
       return this.analyzeVueComponent(component, name);
     }
     
     // Angular компонент
     if (this.isAngularComponent(component)) {
+      console.log('[AST-DEBUG] Detected Angular component', { name, platform: component.platform });
       return this.analyzeAngularComponent(component, name);
     }
     
     // Svelte компонент
     if (this.isSvelteComponent(component)) {
+      console.log('[AST-DEBUG] Detected Svelte component', { name, platform: component.platform });
       return this.analyzeSvelteComponent(component, name);
     }
     
     // Vanilla JS компонент
+    console.log('[AST-DEBUG] Detected Vanilla component', { name, platform: component.platform });
     return this.analyzeVanillaComponent(component, name);
   }
 
@@ -64,6 +70,7 @@ export class ComponentAnalyzer {
   }
 
   private analyzeReactComponent(component: any, name: string): Schema {
+    console.log('[AST-DEBUG] analyzeReactComponent', { name, platform: component.platform, component });
     const props: any[] = [];
     
     // Анализируем propTypes если есть
@@ -111,6 +118,7 @@ export class ComponentAnalyzer {
   }
 
   private analyzeVueComponent(component: any, name: string): Schema {
+    console.log('[AST-DEBUG] analyzeVueComponent', { name, platform: component.platform, component });
     const props: any[] = [];
     
     if (component.props) {
@@ -149,6 +157,7 @@ export class ComponentAnalyzer {
   }
 
   private analyzeAngularComponent(component: any, name: string): Schema {
+    console.log('[AST-DEBUG] analyzeAngularComponent', { name, platform: component.platform, component });
     const props: any[] = [];
     
     // Простой анализ без Reflect
@@ -177,6 +186,7 @@ export class ComponentAnalyzer {
   }
 
   private analyzeSvelteComponent(component: any, name: string): Schema {
+    console.log('[AST-DEBUG] analyzeSvelteComponent', { name, platform: component.platform, component });
     const props: any[] = [];
     
     // Svelte компоненты обычно имеют $$render метод
@@ -212,6 +222,7 @@ export class ComponentAnalyzer {
   }
 
   private analyzeVanillaComponent(component: any, name: string): Schema {
+    console.log('[AST-DEBUG] analyzeVanillaComponent', { name, platform: component.platform, component });
     const props: any[] = [];
     
     // Vanilla JS компоненты - анализируем как функции
