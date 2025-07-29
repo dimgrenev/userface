@@ -1,6 +1,6 @@
 {
   "name": "userface",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Universal Data-Driven UI Engine with live data, validation, and multi-platform support",
   "main": "build/index.js",
   "module": "build/index.esm.js",
