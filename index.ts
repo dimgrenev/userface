@@ -13,6 +13,9 @@ export type { LogLevel, LogEntry } from './engine/logger';
 export { renderReact, RenderReact } from './engine/render-react';
 export { UserRenderer, ReactContextProvider, useUserContext, useUserFace } from './engine/render-react';
 
+// React Native adapter exports
+export { renderReactNative, RenderReactNative } from './engine/render-react-native';
+
 // Vue adapter exports
 export { renderVue, RenderVue } from './engine/render-vue';
 
@@ -101,6 +104,7 @@ export { eventBus as events } from './engine/event-bus';
 // Auto-register renderers and components
 import { engine } from './engine/engine-factory';
 import { renderReact } from './engine/render-react';
+import { renderReactNative } from './engine/render-react-native';
 import { renderVue } from './engine/render-vue';
 import { renderAngular } from './engine/render-angular';
 import { renderSvelte } from './engine/render-svelte';
@@ -116,6 +120,16 @@ const adapterPlugins = [
     adapter: renderReact,
     install: () => {
       engine.registerAdapter(renderReact);
+    }
+  },
+  {
+    id: 'react-native-adapter',
+    name: 'React Native Adapter',
+    version: '1.0.0',
+    type: 'adapter',
+    adapter: renderReactNative,
+    install: () => {
+      engine.registerAdapter(renderReactNative);
     }
   },
   {
