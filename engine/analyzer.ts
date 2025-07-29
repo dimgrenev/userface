@@ -1,42 +1,66 @@
-import * as React from 'react';
 import { Schema } from './schema';
 import { Type } from './types';
-import { logger } from './logger';
 
-// Расширяем Reflect для Angular метаданных
-declare global {
-  interface Reflect {
-    getMetadata(metadataKey: string, target: any): any;
-  }
-}
-
-// Универсальный анализатор компонентов
+// Простой AST-анализатор компонентов
 export class ComponentAnalyzer {
   
   // Анализ компонента любой платформы
   analyzeComponent(component: any, name: string): Schema {
     // Определяем платформу по типу компонента
-    if (React.isValidElement(component) || component.$$typeof) {
+    if (this.isReactComponent(component)) {
       return this.analyzeReactComponent(component, name);
     }
     
     // Vue компонент
-    if (component.render || component.template || component.setup) {
+    if (this.isVueComponent(component)) {
       return this.analyzeVueComponent(component, name);
     }
     
     // Angular компонент
-    if (component.selector || component.templateUrl || component.template) {
+    if (this.isAngularComponent(component)) {
       return this.analyzeAngularComponent(component, name);
     }
     
     // Svelte компонент
-    if (component.$$render || component.fragment) {
+    if (this.isSvelteComponent(component)) {
       return this.analyzeSvelteComponent(component, name);
     }
     
     // Vanilla JS компонент
     return this.analyzeVanillaComponent(component, name);
+  }
+
+  private isReactComponent(component: any): boolean {
+    return component && (
+      typeof component === 'function' ||
+      component.$$typeof ||
+      component.propTypes ||
+      component.defaultProps
+    );
+  }
+
+  private isVueComponent(component: any): boolean {
+    return component && (
+      component.render ||
+      component.template ||
+      component.setup ||
+      component.props
+    );
+  }
+
+  private isAngularComponent(component: any): boolean {
+    return component && (
+      component.selector ||
+      component.templateUrl ||
+      component.template
+    );
+  }
+
+  private isSvelteComponent(component: any): boolean {
+    return component && (
+      component.$$render ||
+      component.fragment
+    );
   }
 
   private analyzeReactComponent(component: any, name: string): Schema {
@@ -127,21 +151,16 @@ export class ComponentAnalyzer {
   private analyzeAngularComponent(component: any, name: string): Schema {
     const props: any[] = [];
     
-    // Анализируем Input декораторы
-    try {
-      if (typeof Reflect !== 'undefined' && (Reflect as any).getMetadata) {
-        const inputs = (Reflect as any).getMetadata('inputs', component) || [];
-        inputs.forEach((input: any) => {
-          props.push({
-            name: input.propertyName || input,
-            type: 'text',
-            required: false,
-            description: `Angular input: ${input.propertyName || input}`
-          });
+    // Простой анализ без Reflect
+    if (component.inputs) {
+      component.inputs.forEach((input: any) => {
+        props.push({
+          name: input.propertyName || input,
+          type: 'text',
+          required: false,
+          description: `Angular input: ${input.propertyName || input}`
         });
-      }
-    } catch (error) {
-      logger.debug('Angular metadata not available', 'Analyzer', error as Error);
+      });
     }
     
     return {
@@ -228,15 +247,16 @@ export class ComponentAnalyzer {
 
   // Маппинг типов для разных платформ
   private mapReactPropType(propType: any): Type {
-    // React.PropTypes может не быть доступен в новых версиях
-    const PropTypes = (React as any).PropTypes;
-    if (PropTypes && propType === PropTypes.string) return 'text';
-    if (PropTypes && propType === PropTypes.number) return 'number';
-    if (PropTypes && propType === PropTypes.bool) return 'boolean';
-    if (PropTypes && propType === PropTypes.array) return 'array';
-    if (PropTypes && propType === PropTypes.object) return 'object';
-    if (PropTypes && propType === PropTypes.func) return 'function';
-    if (PropTypes && propType === PropTypes.element) return 'element';
+    // Простой маппинг без React.PropTypes
+    if (propType && typeof propType === 'object') {
+      if (propType.name === 'string') return 'text';
+      if (propType.name === 'number') return 'number';
+      if (propType.name === 'bool') return 'boolean';
+      if (propType.name === 'array') return 'array';
+      if (propType.name === 'object') return 'object';
+      if (propType.name === 'func') return 'function';
+      if (propType.name === 'element') return 'element';
+    }
     return 'text';
   }
 
