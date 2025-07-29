@@ -1,8 +1,13 @@
 import { Schema } from './schema';
 import { Type } from './types';
 
+console.log('[AST-DEBUG] analyzer.ts loaded');
+
 // Простой AST-анализатор компонентов
 export class ComponentAnalyzer {
+  constructor() {
+    console.log('[AST-DEBUG] ComponentAnalyzer constructed');
+  }
   
   // Анализ компонента любой платформы
   analyzeComponent(component: any, name: string): Schema {
@@ -283,4 +288,5 @@ export class ComponentAnalyzer {
 }
 
 // Экспортируем синглтон
-export const componentAnalyzer = new ComponentAnalyzer(); 
+export const componentAnalyzer = new ComponentAnalyzer();
+console.log('[AST-DEBUG] componentAnalyzer exported', componentAnalyzer); 

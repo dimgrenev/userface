@@ -75,6 +75,7 @@ export { testingInfrastructure, TestingInfrastructure } from './testing-infrastr
 export type { TestResult, TestSuite, TestCase, MockComponent, TestEnvironment } from './testing-infrastructure';
 
 // AST Analyzer (серверный)
+console.log('[AST-DEBUG] index.ts: about to export astAnalyzer');
 export { componentAnalyzer as astAnalyzer, componentAnalyzer as ASTAnalyzer } from './engine/analyzer';
 export type ASTAnalysisResult = ReturnType<typeof componentAnalyzer.analyzeComponent>;
 
