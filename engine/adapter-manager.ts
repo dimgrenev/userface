@@ -77,12 +77,11 @@ export class AdapterManager {
     return adapters;
   }
 
-  getAdaptersByPlatform(platform: string): RenderPlatform[] {
+  getAdaptersByPlatform(targetPlatform: string): RenderPlatform[] {
     const adapters = Array.from(this.adapters.values()).filter(
-      adapter => adapter.meta?.platform === platform
+      adapter => adapter.meta?.platform === targetPlatform
     );
-    
-    logger.debug(`Retrieved adapters for platform ${platform}: ${adapters.length}`, 'AdapterManager');
+    logger.debug(`Retrieved adapters for platform ${targetPlatform}: ${adapters.length}`, 'AdapterManager');
     return adapters;
   }
 

@@ -97,7 +97,7 @@ export type {
 export { runDataLayerTests } from './data-layer-tests';
 
 // Comprehensive Tests
-export { runComprehensiveTests } from './comprehensive-tests';
+export { comprehensiveTests } from './comprehensive-tests';
 
 // Utility functions
 export { validateUserFace } from './engine/types';

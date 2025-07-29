@@ -28,7 +28,6 @@ class AngularRenderer implements Renderer {
 // Angular рендерер платформы
 export class RenderAngular implements RenderPlatform {
   id = 'angular';
-  
   meta = {
     name: 'Angular Adapter',
     version: '1.0.0',

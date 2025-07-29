@@ -26,7 +26,7 @@ export interface EventDefinition {
 // Унифицированная схема компонента
 export interface Schema {
   name: string;
-  platform: Platform;
+  detectedPlatform: Platform;
   props: PropDefinition[];
   events: EventDefinition[];
   children?: boolean; // поддерживает ли children

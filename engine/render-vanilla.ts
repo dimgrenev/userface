@@ -28,9 +28,8 @@ class VanillaRenderer implements Renderer {
 // Vanilla JS рендерер платформы
 export class RenderVanilla implements RenderPlatform {
   id = 'vanilla';
-  
   meta = {
-    name: 'Vanilla JS Adapter',
+    name: 'Vanilla Adapter',
     version: '1.0.0',
     platform: 'vanilla'
   };

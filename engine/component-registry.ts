@@ -11,7 +11,7 @@ export class ComponentRegistry implements IComponentStore {
       if (!schema) {
         schema = {
           name,
-          platform: 'universal',
+          detectedPlatform: 'universal',
           props: [],
           events: []
         };

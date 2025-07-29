@@ -28,7 +28,6 @@ class VueRenderer implements Renderer {
 // Vue рендерер платформы
 export class RenderVue implements RenderPlatform {
   id = 'vue';
-  
   meta = {
     name: 'Vue Adapter',
     version: '1.0.0',

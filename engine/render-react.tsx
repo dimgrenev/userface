@@ -278,13 +278,12 @@ export const UserRenderer: React.FC<{
 // React платформа рендерер
 export class RenderReact implements RenderPlatform {
   id = 'react';
-  
   meta = {
-    name: 'React Renderer',
+    name: 'React Adapter',
     version: '1.0.0',
     platform: 'react'
   };
-
+  
   renderer = new ReactRenderer();
 
   render(spec: Face): any {

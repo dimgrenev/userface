@@ -35,7 +35,7 @@ export interface UserEngine {
   getAllComponents(): Record<string, any>;
   getAllComponentNames(): string[];
   getAllSchemas(): Schema[];
-  getSchemasByPlatform(platform: Platform): Schema[];
+  getSchemasByPlatform(targetPlatform: Platform): Schema[];
   
   // === РЕНДЕРЕРЫ ПЛАТФОРМ ===
   registerAdapter(adapter: RenderPlatform): void;

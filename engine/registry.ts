@@ -102,8 +102,8 @@ export class Registry implements UserEngine {
     return Array.from(this.schemas.values());
   }
 
-  getSchemasByPlatform(platform: string): Schema[] {
-    return Array.from(this.schemas.values()).filter(schema => schema.platform === platform);
+  getSchemasByPlatform(targetPlatform: string): Schema[] {
+    return Array.from(this.schemas.values()).filter(schema => schema.detectedPlatform === targetPlatform);
   }
 
   // === РЕНДЕРЕРЫ ПЛАТФОРМ ===
@@ -365,7 +365,7 @@ export class Registry implements UserEngine {
   private createFallbackSchema(name: string): Schema {
     return {
       name,
-      platform: 'universal',
+      detectedPlatform: 'universal',
       props: [],
       events: []
     };

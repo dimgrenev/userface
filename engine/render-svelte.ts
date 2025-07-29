@@ -28,7 +28,6 @@ class SvelteRenderer implements Renderer {
 // Svelte рендерер платформы
 export class RenderSvelte implements RenderPlatform {
   id = 'svelte';
-  
   meta = {
     name: 'Svelte Adapter',
     version: '1.0.0',

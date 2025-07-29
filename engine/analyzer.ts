@@ -1,31 +1,42 @@
+import { Project, SyntaxKind, TypeFormatFlags, ScriptTarget, ModuleKind, ModuleResolutionKind } from 'ts-morph';
+import { JsxEmit } from 'typescript';
 import { Schema } from './schema';
 import { Type } from './types';
 
 console.log('[AST-DEBUG] analyzer.ts loaded');
 
 export class ComponentAnalyzer {
+  private project: Project;
+
   constructor() {
     console.log('[AST-DEBUG] ComponentAnalyzer constructed');
+    this.project = new Project({
+      compilerOptions: {
+        target: ScriptTarget.ES2020,
+        module: ModuleKind.ESNext,
+        moduleResolution: ModuleResolutionKind.NodeJs,
+        allowSyntheticDefaultImports: true,
+        esModuleInterop: true,
+        jsx: JsxEmit.ReactJSX,
+        strict: true,
+        skipLibCheck: true
+      }
+    });
   }
 
   analyzeComponent(component: any, name: string): Schema {
     console.log('[AST-DEBUG] analyzeComponent called', { name, component });
     
     try {
-      // Если component содержит код как строку, анализируем его
       if (typeof component === 'object' && component.code) {
         return this.analyzeCodeString(component.code, name);
       }
-      
-      // Если component - это функция или объект, анализируем его структуру
       return this.analyzeComponentObject(component, name);
-      
     } catch (error) {
       console.error('[AST-DEBUG] Error in analyzeComponent:', error);
-      // Возвращаем fallback схему
       return {
         name,
-        platform: 'universal',
+        detectedPlatform: 'universal',
         props: [],
         events: [],
         children: false,
@@ -38,36 +49,224 @@ export class ComponentAnalyzer {
     console.log('[AST-DEBUG] analyzeCodeString called', { name, codeLength: code.length });
     
     try {
+      // Создаем временный файл для анализа
+      const sourceFile = this.project.createSourceFile(`temp-${name}.tsx`, code);
+      
       const props: any[] = [];
       const events: any[] = [];
-      let platform = 'universal';
-      let children = false;
       
-      // Анализируем интерфейсы и типы с помощью regex
-      this.extractInterfacesRegex(code, props, events);
+      // Анализируем интерфейсы
+      this.extractInterfaces(sourceFile, props, events);
       
-      // Анализируем функции и компоненты
-      this.extractFunctionsRegex(code, props, events, name);
+      // Анализируем функции/компоненты
+      this.extractFunctions(sourceFile, props, events, name);
       
       // Определяем платформу
-      platform = this.detectPlatformRegex(code);
+      const platform = this.detectPlatform(sourceFile);
       
       // Проверяем поддержку children
-      children = this.detectChildrenSupportRegex(code);
+      const children = this.detectChildrenSupport(sourceFile);
+      
+      // Дедуплицируем и объединяем пропсы
+      const uniqueProps = this.deduplicateProps(props);
       
       return {
         name,
-        platform,
-        props,
+        detectedPlatform: platform,
+        props: uniqueProps,
         events,
         children,
-        description: `Component ${name} (analyzed from code)`
+        description: `Component ${name} (analyzed from AST)`
       };
-      
     } catch (error) {
       console.error('[AST-DEBUG] Error in analyzeCodeString:', error);
       throw error;
     }
+  }
+
+  private extractInterfaces(sourceFile: any, props: any[], events: any[]): void {
+    const interfaces = sourceFile.getInterfaces();
+    
+    interfaces.forEach((interfaceDecl: any) => {
+      const properties = interfaceDecl.getProperties();
+      
+      properties.forEach((property: any) => {
+        const propName = property.getName();
+        const propType = property.getType();
+        const isOptional = property.hasQuestionToken();
+        
+        if (propName.startsWith('on')) {
+          events.push({
+            name: propName,
+            parameters: [],
+            description: `${propName} event`
+          });
+        } else {
+          props.push({
+            name: propName,
+            type: this.mapTypeScriptType(propType),
+            required: !isOptional,
+            description: `Interface prop: ${propName}`
+          });
+        }
+      });
+    });
+  }
+
+  private extractFunctions(sourceFile: any, props: any[], events: any[], componentName: string): void {
+    // Ищем функции с именем компонента
+    const functions = sourceFile.getFunctions();
+    const variables = sourceFile.getVariableStatements();
+    
+    // Анализируем функции
+    functions.forEach((func: any) => {
+      if (func.getName() === componentName) {
+        this.analyzeFunctionParameters(func, props, events);
+      }
+    });
+    
+    // Анализируем переменные (const Component = ...)
+    variables.forEach((varStmt: any) => {
+      const declarations = varStmt.getDeclarations();
+      declarations.forEach((decl: any) => {
+        if (decl.getName() === componentName) {
+          const initializer = decl.getInitializer();
+          if (initializer && initializer.getKind() === SyntaxKind.ArrowFunction) {
+            this.analyzeFunctionParameters(initializer, props, events);
+          }
+        }
+      });
+    });
+  }
+
+  private analyzeFunctionParameters(func: any, props: any[], events: any[]): void {
+    const parameters = func.getParameters();
+    
+    parameters.forEach((param: any) => {
+      const paramName = param.getName();
+      const paramType = param.getType();
+      const isOptional = param.hasQuestionToken();
+      
+      if (paramName.startsWith('on')) {
+        events.push({
+          name: paramName,
+          parameters: [],
+          description: `${paramName} event`
+        });
+      } else {
+        props.push({
+          name: paramName,
+          type: this.mapTypeScriptType(paramType),
+          required: !isOptional,
+          description: `Function prop: ${paramName}`
+        });
+      }
+    });
+  }
+
+  private detectPlatform(sourceFile: any): string {
+    const imports = sourceFile.getImportDeclarations();
+    
+    for (const importDecl of imports) {
+      const moduleSpecifier = importDecl.getModuleSpecifierValue();
+      
+      if (moduleSpecifier.includes('react') || moduleSpecifier.includes('@types/react')) {
+        return 'react';
+      }
+      if (moduleSpecifier.includes('vue')) {
+        return 'vue';
+      }
+      if (moduleSpecifier.includes('@angular')) {
+        return 'angular';
+      }
+      if (moduleSpecifier.includes('svelte')) {
+        return 'svelte';
+      }
+    }
+    
+    // Проверяем использование React хуков
+    const identifiers = sourceFile.getDescendantsOfKind(SyntaxKind.Identifier);
+    const reactHooks = ['useState', 'useEffect', 'useContext', 'useMemo', 'useCallback'];
+    
+    for (const identifier of identifiers) {
+      if (reactHooks.includes(identifier.getText())) {
+        return 'react';
+      }
+    }
+    
+    return 'universal';
+  }
+
+  private detectChildrenSupport(sourceFile: any): boolean {
+    const identifiers = sourceFile.getDescendantsOfKind(SyntaxKind.Identifier);
+    
+    for (const identifier of identifiers) {
+      const text = identifier.getText();
+      if (text === 'children' || text === 'ReactNode') {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  private deduplicateProps(props: any[]): any[] {
+    const propMap = new Map();
+    
+    props.forEach(prop => {
+      const existing = propMap.get(prop.name);
+      
+      if (existing) {
+        // Объединяем информацию о пропе
+        propMap.set(prop.name, {
+          ...existing,
+          required: existing.required || prop.required,
+          type: this.mergeTypes(existing.type, prop.type),
+          description: existing.description || prop.description
+        });
+      } else {
+        propMap.set(prop.name, prop);
+      }
+    });
+    
+    return Array.from(propMap.values());
+  }
+
+  private mergeTypes(type1: Type, type2: Type): Type {
+    // Если типы одинаковые, возвращаем любой
+    if (type1 === type2) return type1;
+    
+    // Если один из типов более специфичный, возвращаем его
+    if (type1 === 'text' && type2 === 'array') return 'array';
+    if (type1 === 'array' && type2 === 'text') return 'array';
+    if (type1 === 'object' && type2 === 'text') return 'object';
+    if (type1 === 'text' && type2 === 'object') return 'object';
+    
+    // По умолчанию возвращаем первый тип
+    return type1;
+  }
+
+  private mapTypeScriptType(type: any): Type {
+    const typeText = type.getText();
+    
+    if (type.isString()) return 'text';
+    if (type.isNumber()) return 'number';
+    if (type.isBoolean()) return 'boolean';
+    if (type.isFunction()) return 'function';
+    if (type.isArray()) return 'array';
+    if (type.isObject()) return 'object';
+    
+    // Проверяем по тексту типа
+    const text = typeText.toLowerCase();
+    
+    if (text.includes('string') || text.includes('text')) return 'text';
+    if (text.includes('number') || text.includes('int') || text.includes('float')) return 'number';
+    if (text.includes('boolean') || text.includes('bool')) return 'boolean';
+    if (text.includes('function') || text.includes('()')) return 'function';
+    if (text.includes('array') || text.includes('[]')) return 'array';
+    if (text.includes('object') || text.includes('{}')) return 'object';
+    
+    return 'text'; // default
   }
 
   private analyzeComponentObject(component: any, name: string): Schema {
@@ -77,9 +276,7 @@ export class ComponentAnalyzer {
     const events: any[] = [];
     let platform = 'universal';
     
-    // Простой анализ объекта компонента
     if (typeof component === 'function') {
-      // Анализируем параметры функции
       const paramNames = this.getFunctionParameters(component);
       paramNames.forEach(paramName => {
         if (paramName.startsWith('on')) {
@@ -97,13 +294,12 @@ export class ComponentAnalyzer {
           });
         }
       });
-      
       platform = this.detectPlatformFromComponent(component);
     }
     
     return {
       name,
-      platform,
+      detectedPlatform: platform,
       props,
       events,
       children: true,
@@ -111,94 +307,7 @@ export class ComponentAnalyzer {
     };
   }
 
-  private extractInterfacesRegex(code: string, props: any[], events: any[]): void {
-    // Ищем интерфейсы
-    const interfaceRegex = /interface\s+(\w+)\s*\{([^}]+)\}/g;
-    let match;
-    
-    while ((match = interfaceRegex.exec(code)) !== null) {
-      const interfaceName = match[1];
-      const interfaceBody = match[2];
-      
-      // Ищем свойства в интерфейсе
-      const propertyRegex = /(\w+)\s*(\?)?\s*:\s*([^;]+);/g;
-      let propMatch;
-      
-      while ((propMatch = propertyRegex.exec(interfaceBody)) !== null) {
-        const propName = propMatch[1];
-        const isOptional = !!propMatch[2];
-        const propType = propMatch[3].trim();
-        
-        if (propName.startsWith('on')) {
-          events.push({
-            name: propName,
-            parameters: [],
-            description: `${propName} event`
-          });
-        } else {
-          props.push({
-            name: propName,
-            type: this.mapTypeScriptType(propType),
-            required: !isOptional,
-            description: `Interface prop: ${propName}`
-          });
-        }
-      }
-    }
-  }
-
-  private extractFunctionsRegex(code: string, props: any[], events: any[], componentName: string): void {
-    // Ищем функции с именем компонента
-    const functionRegex = new RegExp(`(?:function\\s+${componentName}|const\\s+${componentName}\\s*=\\s*\\(|export\\s+(?:function\\s+)?${componentName})\\s*\\(([^)]*)\\)`, 'g');
-    let match;
-    
-    while ((match = functionRegex.exec(code)) !== null) {
-      const params = match[1];
-      if (params) {
-        const paramList = params.split(',').map(p => p.trim());
-        paramList.forEach(param => {
-          const paramName = param.split(':')[0].trim();
-          const paramType = param.split(':')[1]?.trim() || 'any';
-          
-          if (paramName.startsWith('on')) {
-            events.push({
-              name: paramName,
-              parameters: [],
-              description: `${paramName} event`
-            });
-          } else {
-            props.push({
-              name: paramName,
-              type: this.mapTypeScriptType(paramType),
-              required: !param.includes('?'),
-              description: `Function prop: ${paramName}`
-            });
-          }
-        });
-      }
-    }
-  }
-
-  private detectPlatformRegex(code: string): string {
-    // Определяем платформу по паттернам в коде
-    if (code.includes('import React') || code.includes('from "react"') || code.includes('useState') || code.includes('useEffect')) {
-      return 'react';
-    }
-    if (code.includes('import Vue') || code.includes('from "vue"') || code.includes('defineComponent')) {
-      return 'vue';
-    }
-    if (code.includes('@Component') || code.includes('@Input') || code.includes('from "@angular')) {
-      return 'angular';
-    }
-    if (code.includes('$:') || code.includes('{#if}') || code.includes('from "svelte')) {
-      return 'svelte';
-    }
-    
-    return 'universal';
-  }
-
   private detectPlatformFromComponent(component: any): string {
-    // Определяем платформу по свойствам компонента
     if (component.$$typeof) {
       return 'react';
     }
@@ -208,13 +317,7 @@ export class ComponentAnalyzer {
     if (component.selector || component.templateUrl) {
       return 'angular';
     }
-    
     return 'universal';
-  }
-
-  private detectChildrenSupportRegex(code: string): boolean {
-    // Проверяем поддержку children
-    return code.includes('children') || code.includes('{children}') || code.includes('ReactNode');
   }
 
   private getFunctionParameters(func: Function): string[] {
@@ -225,33 +328,7 @@ export class ComponentAnalyzer {
     }
     return [];
   }
-
-  private mapTypeScriptType(typeText: string): Type {
-    const type = typeText.toLowerCase();
-    
-    if (type.includes('string') || type.includes('text')) {
-      return 'text';
-    }
-    if (type.includes('number') || type.includes('int') || type.includes('float')) {
-      return 'number';
-    }
-    if (type.includes('boolean') || type.includes('bool')) {
-      return 'boolean';
-    }
-    if (type.includes('function') || type.includes('()')) {
-      return 'function';
-    }
-    if (type.includes('array') || type.includes('[]')) {
-      return 'array';
-    }
-    if (type.includes('object') || type.includes('{}')) {
-      return 'object';
-    }
-    
-    return 'text'; // default
-  }
 }
 
-// Экспортируем синглтон
 export const componentAnalyzer = new ComponentAnalyzer();
 console.log('[AST-DEBUG] componentAnalyzer exported', componentAnalyzer); 

@@ -17,6 +17,7 @@
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview",
+    "test": "tsx comprehensive-tests.ts",
     "generate-specs": "tsx delete/scripts/generate-specs.ts",
     "generate-types": "tsx delete/scripts/generate-types.ts",
     "init": "node delete/scripts/create-userface-folder.js"
