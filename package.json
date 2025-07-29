@@ -1,9 +1,9 @@
 {
   "name": "userface",
-  "version": "1.0.25",
+  "version": "1.0.36",
   "description": "Universal Data-Driven UI Engine with live data, validation, and multi-platform support",
   "main": "build/index.js",
-  "module": "build/index.esm.js",
+  "module": "build/index.js",
   "types": "build/index.d.ts",
   "bin": {
     "userface": "delete/scripts/create-userface-folder.js"
@@ -14,8 +14,8 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "vite build",
-    "dev": "vite",
+    "build": "tsc --project tsconfig.json --outDir build",
+    "dev": "tsx src/index.ts",
     "preview": "vite preview",
     "test": "tsx comprehensive-tests.ts",
     "generate-specs": "tsx delete/scripts/generate-specs.ts",
@@ -38,7 +38,8 @@
     "svelte",
     "typescript",
     "plugin-system",
-    "error-recovery"
+    "error-recovery",
+    "ast-analyzer"
   ],
   "author": "Dima Grenev",
   "license": "MIT",

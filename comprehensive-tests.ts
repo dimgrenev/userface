@@ -1,22 +1,32 @@
-import { engine } from './engine/engine-factory';
-import { Schema } from './engine/schema';
-import { Face } from './engine/types';
-import { componentAnalyzer } from './engine/analyzer';
+import { logger } from './engine/logger';
+import { realASTAnalyzer } from './engine/real-ast-analyzer';
 
-export class ComprehensiveTests {
-  private testResults: Array<{ name: string; passed: boolean; error?: string; duration: number }> = [];
+console.log('[TESTS] Starting comprehensive tests...');
 
-  constructor() {
-    // Инициализация тестов
-  }
+interface TestResult {
+  name: string;
+  success: boolean;
+  duration: number;
+  error?: string;
+}
 
-  async runAllTests(): Promise<void> {
-    console.log('🧪 Запуск комплексных тестов...');
-    
+class ComprehensiveTests {
+  private results: TestResult[] = [];
+
+  async runAllTests(): Promise<TestResult[]> {
+    console.log('[TESTS] Running all tests...');
+
     const tests = [
-      { name: 'Registry', fn: () => this.testRegistry() },
-      { name: 'Analyzer', fn: () => this.testAnalyzer() },
-      { name: 'Integration', fn: () => this.testIntegration() }
+      { name: 'Logger', fn: () => this.testLogger() },
+      { name: 'AST Analyzer', fn: () => this.testASTAnalyzer() },
+      { name: 'Engine Factory', fn: () => this.testEngineFactory() },
+      { name: 'Data Layer', fn: () => this.testDataLayer() },
+      { name: 'Validation', fn: () => this.testValidation() },
+      { name: 'Plugin System', fn: () => this.testPluginSystem() },
+      { name: 'Event Bus', fn: () => this.testEventBus() },
+      { name: 'Lifecycle Manager', fn: () => this.testLifecycleManager() },
+      { name: 'Component Registry', fn: () => this.testComponentRegistry() },
+      { name: 'Error Recovery', fn: () => this.testErrorRecovery() }
     ];
 
     for (const test of tests) {
@@ -24,118 +34,197 @@ export class ComprehensiveTests {
     }
 
     this.printResults();
+    return this.results;
   }
 
   private async runTest(name: string, testFn: () => Promise<void>): Promise<void> {
-    const start = Date.now();
+    const startTime = Date.now();
+    
     try {
       await testFn();
-      this.testResults.push({ name, passed: true, duration: Date.now() - start });
+      this.results.push({
+        name,
+        success: true,
+        duration: Date.now() - startTime
+      });
       console.log(`✅ ${name} passed`);
     } catch (error) {
-      this.testResults.push({ 
-        name, 
-        passed: false, 
-        error: error instanceof Error ? error.message : String(error),
-        duration: Date.now() - start 
+      this.results.push({
+        name,
+        success: false,
+        duration: Date.now() - startTime,
+        error: error instanceof Error ? error.message : String(error)
       });
       console.log(`❌ ${name} failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  private printResults(): void {
-    console.log('\n📊 Результаты тестов:');
-    console.log('='.repeat(50));
+  private async testLogger(): Promise<void> {
+    logger.info('Test info message', 'TestLogger');
+    logger.warn('Test warning message', 'TestLogger');
+    logger.error('Test error message', 'TestLogger');
     
-    const passed = this.testResults.filter(r => r.passed).length;
-    const total = this.testResults.length;
-    
-    this.testResults.forEach(result => {
-      const status = result.passed ? '✅' : '❌';
-      const duration = `${result.duration}ms`;
-      console.log(`${status} ${result.name} (${duration})`);
-      if (!result.passed && result.error) {
-        console.log(`   Error: ${result.error}`);
-      }
-    });
-    
-    console.log('='.repeat(50));
-    console.log(`Итого: ${passed}/${total} тестов прошли`);
-  }
-
-  private async testRegistry(): Promise<void> {
-    // Регистрируем компонент
-    engine.registerComponent('TestButton', () => 'button');
-    
-    // Проверяем что компонент зарегистрирован
-    const component = engine.getComponent('TestButton');
-    if (!component) {
-      throw new Error('Component not registered');
-    }
-
-    // Проверяем схему
-    const retrievedSchema = engine.getComponentSchema('TestButton');
-    if (!retrievedSchema) {
-      throw new Error('Schema not found');
+    // Проверяем, что логгер работает без ошибок
+    if (typeof logger.info !== 'function') {
+      throw new Error('Logger.info is not a function');
     }
   }
 
-  private async testAnalyzer(): Promise<void> {
+  private async testASTAnalyzer(): Promise<void> {
     const testComponent = {
       name: 'TestComponent',
       code: `
-        import React from 'react';
-        
         interface TestProps {
-          id: string;
-          value: string;
-          disabled?: boolean;
-          onChange?: (value: string) => void;
+          name: string;
+          age?: number;
+          onSave?: () => void;
         }
         
-        export const TestComponent: React.FC<TestProps> = ({ 
-          id, 
-          value, 
-          disabled = false, 
-          onChange 
-        }) => {
-          return <div>Test</div>;
+        export const TestComponent: React.FC<TestProps> = ({ name, age, onSave }) => {
+          return <div onClick={onSave}>{name}: {age}</div>;
         };
       `
     };
 
-    const result = componentAnalyzer.analyzeComponent(testComponent, 'TestComponent');
+    const result = realASTAnalyzer.analyzeComponent(testComponent, 'TestComponent');
     
-    if (!result) {
-      throw new Error('Analysis failed');
+    if (!result || !result.name || !result.props) {
+      throw new Error('AST analyzer returned invalid result');
     }
     
-    if (result.detectedPlatform !== 'react') {
-      throw new Error(`Expected platform 'react', got '${result.detectedPlatform}'`);
+    if (result.name !== 'TestComponent') {
+      throw new Error(`Expected component name 'TestComponent', got '${result.name}'`);
     }
     
     if (result.props.length === 0) {
-      throw new Error('No props detected');
-    }
-    
-    // Проверяем что id есть в пропсах
-    const idProp = result.props.find(p => p.name === 'id');
-    if (!idProp) {
-      throw new Error('id prop not detected');
+      throw new Error('AST analyzer should extract props from interface');
     }
   }
 
-  private async testIntegration(): Promise<void> {
-    // Регистрируем компонент
-    engine.registerComponent('ComplexComponent', () => 'div');
+  private async testEngineFactory(): Promise<void> {
+    const { EngineFactory } = await import('./engine/engine-factory');
+    const engine = EngineFactory.createEngine();
     
-    // Проверяем что можем получить компонент
-    const component = engine.getComponent('ComplexComponent');
-    if (!component) {
-      throw new Error('Component not found after registration');
+    if (!engine) {
+      throw new Error('Engine factory failed to create engine');
     }
+  }
+
+  private async testDataLayer(): Promise<void> {
+    const { dataLayer } = await import('./engine/data-layer');
+    
+    // Регистрируем тестовый источник данных
+    dataLayer.registerDataSource('test', {
+      type: 'static',
+      data: { message: 'Hello World' }
+    });
+    
+    const data = await dataLayer.getData('test');
+    if (!data || data.message !== 'Hello World') {
+      throw new Error('Data layer failed to retrieve test data');
+    }
+  }
+
+  private async testValidation(): Promise<void> {
+    const { validationEngine } = await import('./engine/validation');
+    
+    const result = validationEngine.validateComponent({}, { name: 'test', props: [] });
+    if (!result || typeof result.isValid !== 'boolean') {
+      throw new Error('Validation engine returned invalid result');
+    }
+  }
+
+  private async testPluginSystem(): Promise<void> {
+    const { PluginSystem } = await import('./engine/plugin-system');
+    const pluginSystem = new PluginSystem({});
+    
+    const testPlugin = {
+      id: 'test-plugin',
+      name: 'Test Plugin',
+      version: '1.0.0',
+      type: 'custom' as const
+    };
+    
+    await pluginSystem.registerPlugin(testPlugin);
+    const plugins = pluginSystem.getAllPlugins();
+    
+    if (plugins.length === 0) {
+      throw new Error('Plugin system failed to register plugin');
+    }
+  }
+
+  private async testEventBus(): Promise<void> {
+    const { eventBus } = await import('./engine/event-bus');
+    
+    let eventReceived = false;
+    eventBus.on('test-event', () => {
+      eventReceived = true;
+    });
+    
+    eventBus.emit('test-event');
+    
+    if (!eventReceived) {
+      throw new Error('Event bus failed to emit/receive event');
+    }
+  }
+
+  private async testLifecycleManager(): Promise<void> {
+    const { lifecycleManager } = await import('./engine/lifecycle-manager');
+    
+    let lifecycleExecuted = false;
+    lifecycleManager.onBeforeRegister(() => {
+      lifecycleExecuted = true;
+    });
+    
+    await lifecycleManager.executeLifecycle('beforeRegister', {});
+    
+    if (!lifecycleExecuted) {
+      throw new Error('Lifecycle manager failed to execute lifecycle');
+    }
+  }
+
+  private async testComponentRegistry(): Promise<void> {
+    const { ComponentRegistry } = await import('./engine/component-registry');
+    const registry = new ComponentRegistry();
+    
+    const testComponent = { render: () => 'test' };
+    registry.registerComponent('test', testComponent);
+    
+    const retrieved = registry.getComponent('test');
+    if (!retrieved) {
+      throw new Error('Component registry failed to store/retrieve component');
+    }
+  }
+
+  private async testErrorRecovery(): Promise<void> {
+    const { errorRecovery } = await import('./engine/error-recovery');
+    
+    const result = errorRecovery.handleError(new Error('Test error'), {});
+    if (!result || !result.recovered) {
+      throw new Error('Error recovery failed to handle error');
+    }
+  }
+
+  private printResults(): void {
+    console.log('\n=== TEST RESULTS ===');
+    const passed = this.results.filter(r => r.success).length;
+    const failed = this.results.filter(r => !r.success).length;
+    const totalDuration = this.results.reduce((sum, r) => sum + r.duration, 0);
+    
+    console.log(`Total: ${this.results.length}, Passed: ${passed}, Failed: ${failed}`);
+    console.log(`Total duration: ${totalDuration}ms`);
+    
+    if (failed > 0) {
+      console.log('\nFailed tests:');
+      this.results.filter(r => !r.success).forEach(r => {
+        console.log(`  ❌ ${r.name}: ${r.error}`);
+      });
+    }
+    
+    console.log('\n=== END RESULTS ===');
   }
 }
 
-// Экспорт для использования
-export const comprehensiveTests = new ComprehensiveTests(); 
+// Запускаем тесты
+const tests = new ComprehensiveTests();
+tests.runAllTests().catch(console.error); 

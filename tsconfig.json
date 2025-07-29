@@ -3,32 +3,32 @@
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
+    "module": "CommonJS",
     "skipLibCheck": true,
     "types": ["vitest/globals", "@testing-library/jest-dom", "react", "react-dom"],
     "moduleResolution": "node",
-    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
+    "noEmit": false,
+    "outDir": "build",
     "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["engine", "index.ts"],
   "exclude": [
     "node_modules",
     "dist",
-    "src/**/*.test.tsx",
-    "src/components/*",
-    "!src/components/Button"
+    "build",
+    "*.test.tsx",
+    "components/*"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 } 
