@@ -4,7 +4,7 @@ import { Type } from './types';
 
 export interface ASTAnalysisResult {
   name: string;
-  platform: string;
+  detectedPlatform: string;
   props: PropDefinition[];
   events: EventDefinition[];
   interfaces: string[];
@@ -59,7 +59,7 @@ export class ASTAnalyzer {
   private analyzeAST(sourceFile: ts.SourceFile): ASTAnalysisResult {
     const result: ASTAnalysisResult = {
       name: '',
-      platform: 'unknown',
+      detectedPlatform: 'unknown',
       props: [],
       events: [],
       interfaces: [],
@@ -68,7 +68,8 @@ export class ASTAnalyzer {
     };
 
     // Определяем платформу
-    result.platform = this.detectPlatform(sourceFile);
+    result.detectedPlatform = this.detectPlatform(sourceFile);
+    console.log('DEBUG: platform assigned:', typeof result.detectedPlatform, result.detectedPlatform);
 
     // Анализируем интерфейсы и типы
     this.analyzeInterfaces(sourceFile, result);
@@ -79,44 +80,15 @@ export class ASTAnalyzer {
     // Анализируем события
     this.analyzeEvents(sourceFile, result);
 
+    console.log('DEBUG: final result.detectedPlatform:', typeof result.detectedPlatform, result.detectedPlatform);
     return result;
   }
 
   private detectPlatform(sourceFile: ts.SourceFile): string {
-    const text = sourceFile.getText();
-
-    // React Native
-    if (text.includes('TouchableOpacity') || text.includes('onPress') || 
-        text.includes('StyleSheet') || text.includes('Platform.OS') ||
-        text.includes('View') || text.includes('Text') ||
-        text.includes('Image') || text.includes('ScrollView')) {
-      return 'react-native';
-    }
-
-    // React
-    if (text.includes('React.FC') || text.includes('React.Component') || 
-        text.includes('useState') || text.includes('useEffect') ||
-        text.includes('JSX.Element')) {
-      return 'react';
-    }
-
-    // Vue
-    if (text.includes('defineComponent') || text.includes('setup()') ||
-        text.includes('Vue.component')) {
-      return 'vue';
-    }
-
-    // Angular
-    if (text.includes('@Component') || text.includes('selector:')) {
-      return 'angular';
-    }
-
-    // Svelte
-    if (text.includes('$$render') || text.includes('svelte')) {
-      return 'svelte';
-    }
-
-    return 'vanilla';
+    // Временно упрощаем для отладки
+    const platform = 'test-platform';
+    console.log('DEBUG: detectPlatform returning:', typeof platform, platform);
+    return platform;
   }
 
   private analyzeInterfaces(sourceFile: ts.SourceFile, result: ASTAnalysisResult): void {
