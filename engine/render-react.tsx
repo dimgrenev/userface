@@ -1,5 +1,33 @@
-import * as React from 'react';
-import { createContext, useState, useEffect, useContext, useMemo } from 'react';
+// Условные импорты для поддержки Node.js
+let React: any = null;
+let createContext: any = null;
+let useState: any = null;
+let useEffect: any = null;
+let useContext: any = null;
+let useMemo: any = null;
+
+// Проверяем доступность React
+if (typeof window !== 'undefined' && window.React) {
+  React = window.React;
+  createContext = React.createContext;
+  useState = React.useState;
+  useEffect = React.useEffect;
+  useContext = React.useContext;
+  useMemo = React.useMemo;
+} else if (typeof require !== 'undefined') {
+  try {
+    React = require('react');
+    createContext = React.createContext;
+    useState = React.useState;
+    useEffect = React.useEffect;
+    useContext = React.useContext;
+    useMemo = React.useMemo;
+  } catch (error) {
+    // React недоступен в Node.js - это нормально
+    console.warn('React not available in Node.js environment');
+  }
+}
+
 import { Face } from './types';
 import { RenderPlatform, Renderer, ContextProvider } from './api';
 import { ComponentNotFoundError } from './errors';

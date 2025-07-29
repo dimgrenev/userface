@@ -2,6 +2,9 @@
 export { Engine } from './engine/engine';
 export { EngineFactory, engine } from './engine/engine-factory';
 
+// Node.js compatibility
+export { NodeEngine, nodeEngine } from './engine/node-compat';
+
 // Logging
 export { logger } from './engine/logger';
 export type { LogLevel, LogEntry } from './engine/logger';
