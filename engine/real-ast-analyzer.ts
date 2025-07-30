@@ -1,305 +1,350 @@
 import * as ts from 'typescript';
-import { Schema } from './schema';
-import { Type } from './types';
+import { Schema, PropDefinition, EventDefinition } from './schema';
+import { Platform, Type } from './types';
+import { PropGenerator } from './prop-generator';
 
-console.log('[REAL-AST] Real AST analyzer loaded');
+export interface ComponentInfo {
+  name: string;
+  code: string;
+}
+
+export interface AnalysisResult extends Schema {
+  // Дополнительные поля для совместимости
+  platform?: Platform;
+}
 
 export class RealASTAnalyzer {
-  private compilerOptions: ts.CompilerOptions;
+  private program: ts.Program | null = null;
+  private sourceFile: ts.SourceFile | null = null;
 
-  constructor() {
-    console.log('[REAL-AST] RealASTAnalyzer constructed');
-    this.compilerOptions = {
-      target: ts.ScriptTarget.ES2020,
-      module: ts.ModuleKind.ESNext,
-      moduleResolution: ts.ModuleResolutionKind.NodeJs,
-      allowSyntheticDefaultImports: true,
-      esModuleInterop: true,
-      jsx: ts.JsxEmit.ReactJSX,
-      strict: true,
-      skipLibCheck: true,
-      noEmit: true,
-      allowJs: true,
-      resolveJsonModule: true
-    };
-  }
-
-  analyzeComponent(component: any, name: string): Schema {
-    console.log('[REAL-AST] analyzeComponent called', { name, component });
-
+  /**
+   * Анализирует компонент и возвращает его схему
+   */
+  async analyzeComponent(component: ComponentInfo, componentName: string): Promise<AnalysisResult> {
     try {
-      if (typeof component === 'object' && component.code) {
-        return this.analyzeCodeString(component.code, name);
+      console.log(`[AST-DEBUG] Analyzing component: ${componentName}`);
+      
+      // Создаем программу TypeScript
+      this.program = ts.createProgram([`${componentName}.tsx`], {
+        target: ts.ScriptTarget.Latest,
+        module: ts.ModuleKind.CommonJS,
+        jsx: ts.JsxEmit.React,
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        strict: false,
+        skipLibCheck: true
+      }, {
+        getSourceFile: (fileName: string) => {
+          if (fileName.endsWith('.tsx')) {
+            return ts.createSourceFile(fileName, component.code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+          }
+          return undefined;
+        },
+        writeFile: () => {},
+        getCurrentDirectory: () => process.cwd(),
+        getDirectories: () => [],
+        fileExists: (fileName: string) => fileName.endsWith('.tsx'),
+        readFile: (fileName: string) => fileName.endsWith('.tsx') ? component.code : undefined,
+        getDefaultLibFileName: () => 'lib.d.ts',
+        getCanonicalFileName: (fileName: string) => fileName,
+        useCaseSensitiveFileNames: () => false,
+        getNewLine: () => '\n'
+      });
+
+      const sourceFile = this.program.getSourceFile(`${componentName}.tsx`);
+      this.sourceFile = sourceFile || null;
+      
+      if (!this.sourceFile) {
+        throw new Error('Failed to create source file');
       }
-      return this.analyzeComponentObject(component, name);
-    } catch (error) {
-      console.error('[REAL-AST] Error in analyzeComponent:', error);
-      return {
-        name,
-        detectedPlatform: 'universal' as Type,
+
+      // Анализируем компонент
+      const schema: Schema = {
+        name: componentName,
+        detectedPlatform: this.detectPlatform(component.code),
         props: [],
         events: [],
         children: false,
-        description: `Component ${name} (fallback)`
+        description: '',
+        supportsChildren: false
       };
-    }
-  }
 
-  analyzeCodeString(code: string, name: string): Schema {
-    console.log('[REAL-AST] analyzeCodeString called', { name, codeLength: code.length });
+      // Обходим AST
+      this.visitNode(this.sourceFile, schema);
 
-    try {
-      const sourceFile = ts.createSourceFile(
-        `temp-${name}.tsx`,
-        code,
-        ts.ScriptTarget.ES2020,
-        true,
-        ts.ScriptKind.TSX
-      );
+      // Убираем дубликаты пропсов
+      schema.props = this.deduplicateProps(schema.props);
 
-      const props: any[] = [];
-      const events: any[] = [];
-
-      this.visitNode(sourceFile, props, events, name);
-
-      const platform = this.detectPlatform(sourceFile, code);
-      const children = this.detectChildrenSupport(sourceFile);
-      const uniqueProps = this.deduplicateProps(props);
-
+      console.log(`[AST-DEBUG] Analysis complete for ${componentName}:`, schema);
+      
       return {
-        name,
-        detectedPlatform: platform as Type,
-        props: uniqueProps,
-        events,
-        children,
-        description: `Component ${name} (analyzed from real AST)`
+        ...schema,
+        platform: schema.detectedPlatform // Для обратной совместимости
       };
+
     } catch (error) {
-      console.error('[REAL-AST] Error in analyzeCodeString:', error);
+      console.error(`[AST-DEBUG] Error analyzing component ${componentName}:`, error);
       throw error;
     }
   }
 
-  visitNode(node: ts.Node, props: any[], events: any[], componentName: string) {
-    if (ts.isInterfaceDeclaration(node)) {
-      this.analyzeInterface(node, props, events);
+  /**
+   * Генерирует пропсы для компонента на основе его анализа
+   */
+  generatePropsForComponent(component: ComponentInfo, componentName: string): any {
+    try {
+      // Сначала анализируем компонент
+      return this.analyzeComponent(component, componentName).then(schema => {
+        // Затем генерируем пропсы на основе схемы
+        return PropGenerator.generateProps(schema, componentName);
+      });
+    } catch (error) {
+      console.error(`[AST-DEBUG] Error generating props for ${componentName}:`, error);
+      // Возвращаем дефолтные пропсы если анализ не удался
+      return PropGenerator.generateDefaultProps(componentName);
     }
-
-    if (ts.isTypeAliasDeclaration(node)) {
-      this.analyzeTypeAlias(node, props, events);
-    }
-
-    if (ts.isFunctionDeclaration(node)) {
-      this.analyzeFunction(node, props, events, componentName);
-    }
-
-    if (ts.isVariableStatement(node)) {
-      this.analyzeVariableStatement(node, props, events, componentName);
-    }
-
-    if (ts.isArrowFunction(node)) {
-      this.analyzeArrowFunction(node, props, events, componentName);
-    }
-
-    if (ts.isFunctionExpression(node)) {
-      this.analyzeFunctionExpression(node, props, events, componentName);
-    }
-
-    if (ts.isJsxElement(node)) {
-      this.analyzeJSXElement(node, events);
-    }
-
-    ts.forEachChild(node, (child) => this.visitNode(child, props, events, componentName));
   }
 
-  analyzeInterface(node: ts.InterfaceDeclaration, props: any[], events: any[]) {
-    node.members.forEach(member => {
-      if (ts.isPropertySignature(member) && member.name) {
-        const propName = ts.isIdentifier(member.name) ? member.name.text : member.name.getText();
-        const type = member.type ? this.mapTypeScriptType(member.type.getText()) : 'text';
-        const required = !member.questionToken;
+  private visitNode(node: ts.Node, schema: Schema): void {
+    switch (node.kind) {
+      case ts.SyntaxKind.InterfaceDeclaration:
+        this.analyzeInterface(node as ts.InterfaceDeclaration, schema);
+        break;
+      case ts.SyntaxKind.TypeAliasDeclaration:
+        this.analyzeTypeAlias(node as ts.TypeAliasDeclaration, schema);
+        break;
+      case ts.SyntaxKind.FunctionDeclaration:
+        this.analyzeFunction(node as ts.FunctionDeclaration, schema);
+        break;
+      case ts.SyntaxKind.VariableStatement:
+        this.analyzeVariableStatement(node as ts.VariableStatement, schema);
+        break;
+      case ts.SyntaxKind.ArrowFunction:
+        this.analyzeArrowFunction(node as ts.ArrowFunction, schema);
+        break;
+      case ts.SyntaxKind.FunctionExpression:
+        this.analyzeFunctionExpression(node as ts.FunctionExpression, schema);
+        break;
+      case ts.SyntaxKind.JsxElement:
+        this.analyzeJSXElement(node as ts.JsxElement, schema);
+        break;
+      case ts.SyntaxKind.JsxSelfClosingElement:
+        this.analyzeJSXSelfClosingElement(node as ts.JsxSelfClosingElement, schema);
+        break;
+    }
 
-        props.push({
-          name: propName,
-          type,
-          required,
-          description: `Interface prop: ${propName}`
-        });
-      }
-    });
+    // Рекурсивно обходим дочерние узлы
+    ts.forEachChild(node, (child) => this.visitNode(child, schema));
   }
 
-  analyzeTypeAlias(node: ts.TypeAliasDeclaration, props: any[], events: any[]) {
-    if (ts.isTypeLiteralNode(node.type)) {
-      node.type.members.forEach(member => {
-        if (ts.isPropertySignature(member) && member.name) {
-          const propName = ts.isIdentifier(member.name) ? member.name.text : member.name.getText();
-          const type = member.type ? this.mapTypeScriptType(member.type.getText()) : 'text';
-          const required = !member.questionToken;
-
-          props.push({
+  private analyzeInterface(interfaceDecl: ts.InterfaceDeclaration, schema: Schema): void {
+    const interfaceName = interfaceDecl.name.text;
+    
+    // Проверяем, является ли это интерфейсом пропсов
+    if (interfaceName.includes('Props') || interfaceName.includes('props')) {
+      interfaceDecl.members.forEach(member => {
+        if (ts.isPropertySignature(member)) {
+          const propName = member.name.getText();
+          const propType = member.type ? member.type.getText() : 'any';
+          const isRequired = !member.questionToken;
+          
+          schema.props.push({
             name: propName,
-            type,
-            required,
-            description: `Type prop: ${propName}`
+            type: this.mapTypeScriptType(propType),
+            required: isRequired,
+            description: member.getText()
           });
+        } else if (ts.isMethodSignature(member)) {
+          const methodName = member.name.getText();
+          if (methodName.startsWith('on')) {
+            schema.events.push({
+              name: methodName,
+              parameters: member.parameters.map(p => p.getText()),
+              description: member.getText()
+            });
+          }
         }
       });
     }
   }
 
-  analyzeFunction(node: ts.FunctionDeclaration, props: any[], events: any[], componentName: string) {
-    if (node.name?.text === componentName && node.parameters.length > 0) {
-      const firstParam = node.parameters[0];
-      if (ts.isObjectBindingPattern(firstParam.name)) {
-        firstParam.name.elements.forEach(element => {
-          if (ts.isBindingElement(element) && ts.isIdentifier(element.name)) {
-            const propName = element.name.text;
-            const required = !element.dotDotDotToken;
-            const type = element.propertyName ? 'text' : 'text';
-
-            props.push({
+  private analyzeTypeAlias(typeAlias: ts.TypeAliasDeclaration, schema: Schema): void {
+    const typeName = typeAlias.name.text;
+    
+    if (typeName.includes('Props') || typeName.includes('props')) {
+      if (ts.isTypeLiteralNode(typeAlias.type)) {
+        typeAlias.type.members.forEach(member => {
+          if (ts.isPropertySignature(member)) {
+            const propName = member.name.getText();
+            const propType = member.type ? member.type.getText() : 'any';
+            const isRequired = !member.questionToken;
+            
+            schema.props.push({
               name: propName,
-              type,
-              required,
-              description: `Function prop: ${propName}`
+              type: this.mapTypeScriptType(propType),
+              required: isRequired,
+              description: member.getText()
             });
+          } else if (ts.isMethodSignature(member)) {
+            const methodName = member.name.getText();
+            if (methodName.startsWith('on')) {
+              schema.events.push({
+                name: methodName,
+                parameters: member.parameters.map(p => p.getText()),
+                description: member.getText()
+              });
+            }
           }
         });
       }
     }
   }
 
-  analyzeVariableStatement(node: ts.VariableStatement, props: any[], events: any[], componentName: string) {
-    node.declarationList.declarations.forEach(declaration => {
-      if (ts.isIdentifier(declaration.name) && declaration.name.text === componentName) {
-        if (declaration.initializer && ts.isArrowFunction(declaration.initializer)) {
-          this.analyzeArrowFunction(declaration.initializer, props, events, componentName);
+  private analyzeFunction(funcDecl: ts.FunctionDeclaration, schema: Schema): void {
+    if (!funcDecl.name) return;
+    
+    const funcName = funcDecl.name.text;
+    if (funcName.includes('Component') || funcName.includes('component')) {
+      // Анализируем параметры функции
+      funcDecl.parameters.forEach(param => {
+        if (param.type) {
+          const paramType = param.type.getText();
+          if (paramType.includes('Props') || paramType.includes('props')) {
+            // Это пропсы компонента
+            schema.props.push({
+              name: param.name.getText(),
+              type: this.mapTypeScriptType(paramType),
+              required: !param.questionToken,
+              description: param.getText()
+            });
+          }
         }
+      });
+    }
+  }
+
+  private analyzeVariableStatement(varStmt: ts.VariableStatement, schema: Schema): void {
+    varStmt.declarationList.declarations.forEach(decl => {
+      if (decl.initializer && ts.isArrowFunction(decl.initializer)) {
+        this.analyzeArrowFunction(decl.initializer, schema);
+      } else if (decl.initializer && ts.isFunctionExpression(decl.initializer)) {
+        this.analyzeFunctionExpression(decl.initializer, schema);
       }
     });
   }
 
-  analyzeArrowFunction(node: ts.ArrowFunction, props: any[], events: any[], componentName: string) {
-    if (node.parameters.length > 0) {
-      const firstParam = node.parameters[0];
-      if (ts.isObjectBindingPattern(firstParam.name)) {
-        firstParam.name.elements.forEach(element => {
-          if (ts.isBindingElement(element) && ts.isIdentifier(element.name)) {
-            const propName = element.name.text;
-            const required = !element.dotDotDotToken;
-            const type = element.propertyName ? 'text' : 'text';
-
-            props.push({
-              name: propName,
-              type,
-              required,
-              description: `Arrow function prop: ${propName}`
-            });
-          }
-        });
-      }
-    }
-  }
-
-  analyzeFunctionExpression(node: ts.FunctionExpression, props: any[], events: any[], componentName: string) {
-    if (node.parameters.length > 0) {
-      const firstParam = node.parameters[0];
-      if (ts.isObjectBindingPattern(firstParam.name)) {
-        firstParam.name.elements.forEach(element => {
-          if (ts.isBindingElement(element) && ts.isIdentifier(element.name)) {
-            const propName = element.name.text;
-            const required = !element.dotDotDotToken;
-            const type = element.propertyName ? 'text' : 'text';
-
-            props.push({
-              name: propName,
-              type,
-              required,
-              description: `Function expression prop: ${propName}`
-            });
-          }
-        });
-      }
-    }
-  }
-
-  analyzeJSXElement(node: ts.JsxElement, events: any[]) {
-    node.openingElement.attributes.properties.forEach(attr => {
-      if (ts.isJsxAttribute(attr) && attr.name) {
-        const attrName = ts.isIdentifier(attr.name) ? attr.name.text : attr.name.getText();
-        if (attrName.startsWith('on') && attrName.length > 2) {
-          events.push({
-            name: attrName,
-            parameters: [],
-            description: `${attrName} event`
+  private analyzeArrowFunction(arrowFunc: ts.ArrowFunction, schema: Schema): void {
+    // Анализируем параметры стрелочной функции
+    arrowFunc.parameters.forEach(param => {
+      if (param.type) {
+        const paramType = param.type.getText();
+        if (paramType.includes('Props') || paramType.includes('props')) {
+          schema.props.push({
+            name: param.name.getText(),
+            type: this.mapTypeScriptType(paramType),
+            required: !param.questionToken,
+            description: param.getText()
           });
         }
       }
     });
   }
 
-  detectPlatform(sourceFile: ts.SourceFile, code: string): string {
-    if (code.includes('React.FC') || code.includes('useState') || code.includes('useEffect')) {
-      return 'react';
+  private analyzeFunctionExpression(funcExpr: ts.FunctionExpression, schema: Schema): void {
+    // Анализируем параметры функционального выражения
+    funcExpr.parameters.forEach(param => {
+      if (param.type) {
+        const paramType = param.type.getText();
+        if (paramType.includes('Props') || paramType.includes('props')) {
+          schema.props.push({
+            name: param.name.getText(),
+            type: this.mapTypeScriptType(paramType),
+            required: !param.questionToken,
+            description: param.getText()
+          });
+        }
+      }
+    });
+  }
+
+  private analyzeJSXElement(jsxElement: ts.JsxElement, schema: Schema): void {
+    // Проверяем поддержку children
+    if (jsxElement.children && jsxElement.children.length > 0) {
+      schema.children = true;
+      schema.supportsChildren = true;
     }
-    if (code.includes('@Component') || code.includes('@Input') || code.includes('@Output')) {
-      return 'angular';
-    }
-    if (code.includes('defineComponent') || code.includes('ref(') || code.includes('computed(')) {
-      return 'vue';
-    }
-    if (code.includes('svelte') || code.includes('$:') || code.includes('{#if}')) {
-      return 'svelte';
-    }
+    
+    // Анализируем атрибуты
+    this.analyzeJSXAttributes(jsxElement.openingElement.attributes, schema);
+  }
+
+  private analyzeJSXSelfClosingElement(jsxElement: ts.JsxSelfClosingElement, schema: Schema): void {
+    // Анализируем атрибуты
+    this.analyzeJSXAttributes(jsxElement.attributes, schema);
+  }
+
+  private analyzeJSXAttributes(attributes: ts.JsxAttributes, schema: Schema): void {
+    attributes.properties.forEach(attr => {
+      if (ts.isJsxAttribute(attr)) {
+        const attrName = attr.name.getText();
+        
+        // Проверяем, является ли это событием
+        if (attrName.startsWith('on')) {
+          schema.events.push({
+            name: attrName,
+            parameters: [],
+            description: attr.getText()
+          });
+        }
+      }
+    });
+  }
+
+  private detectPlatform(code: string): Platform {
+    if (code.includes('React') || code.includes('react')) return 'react';
+    if (code.includes('Vue') || code.includes('vue')) return 'vue';
+    if (code.includes('Angular') || code.includes('angular')) return 'angular';
+    if (code.includes('Svelte') || code.includes('svelte')) return 'svelte';
+    if (code.includes('vanilla') || code.includes('Vanilla')) return 'vanilla';
     return 'universal';
   }
 
-  detectChildrenSupport(sourceFile: ts.SourceFile): boolean {
-    let hasChildren = false;
-    const checkNode = (node: ts.Node) => {
-      if (ts.isJsxElement(node) && node.children.length > 0) {
-        hasChildren = true;
+  private detectChildrenSupport(node: ts.Node): boolean {
+    return ts.forEachChild(node, (child) => {
+      if (ts.isJsxElement(child)) {
+        return child.children && child.children.length > 0;
       }
-      ts.forEachChild(node, checkNode);
-    };
-    checkNode(sourceFile);
-    return hasChildren;
+      return false;
+    }) || false;
   }
 
-  deduplicateProps(props: any[]): any[] {
-    const seen = new Set();
+  private deduplicateProps(props: PropDefinition[]): PropDefinition[] {
+    const seen = new Set<string>();
     return props.filter(prop => {
-      const key = prop.name;
-      if (seen.has(key)) {
+      if (seen.has(prop.name)) {
         return false;
       }
-      seen.add(key);
+      seen.add(prop.name);
       return true;
     });
   }
 
-  mapTypeScriptType(typeString: string): string {
-    const lowerType = typeString.toLowerCase();
-    if (lowerType.includes('string')) return 'text';
-    if (lowerType.includes('number')) return 'number';
-    if (lowerType.includes('boolean')) return 'boolean';
-    if (lowerType.includes('array') || lowerType.includes('[]')) return 'array';
-    if (lowerType.includes('object') || lowerType.includes('{}')) return 'object';
-    if (lowerType.includes('function') || lowerType.includes('=>')) return 'function';
+  private mapTypeScriptType(tsType: string): Type {
+    const typeLower = tsType.toLowerCase();
+    
+    if (typeLower.includes('string')) return 'text';
+    if (typeLower.includes('number')) return 'number';
+    if (typeLower.includes('boolean')) return 'boolean';
+    if (typeLower.includes('array') || typeLower.includes('[]')) return 'array';
+    if (typeLower.includes('object') || typeLower.includes('{}')) return 'object';
+    if (typeLower.includes('function') || typeLower.includes('()')) return 'function';
+    if (typeLower.includes('void') || typeLower.includes('undefined')) return 'text';
+    if (typeLower.includes('null')) return 'text';
+    if (typeLower.includes('any') || typeLower.includes('unknown')) return 'text';
+    
     return 'text';
-  }
-
-  analyzeComponentObject(component: any, name: string): Schema {
-    return {
-      name,
-      detectedPlatform: 'universal' as Type,
-      props: [],
-      events: [],
-      children: false,
-      description: `Component ${name} (object fallback)`
-    };
   }
 }
 
+// Экспортируем экземпляр
 export const realASTAnalyzer = new RealASTAnalyzer(); 
