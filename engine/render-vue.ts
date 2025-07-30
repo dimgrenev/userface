@@ -37,12 +37,7 @@ export class RenderVue implements RenderPlatform {
   renderer = new VueRenderer();
   
   // Компоненты, которые поддерживает этот адаптер
-  private supportedComponents: string[] = [
-    'button', 'text', 'input', 'card', 'modal', 'form', 'list', 'table',
-    'tabs', 'accordion', 'slider', 'progress', 'checkbox', 'radio',
-    'select', 'textarea', 'image', 'link', 'container', 'layout',
-    'media', 'panel', 'side', 'footer', 'filter', 'feed', 'code', 'cardcart', 'article'
-  ];
+  private supportedComponents: string[] = [];
   
   // Рендеринг компонента
   render(spec: Face): any {
